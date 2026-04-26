@@ -19,18 +19,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 
 async function handleFetchRating(title, year) {
-  const cacheKey = `film_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
+  // Update cache prefix to force invalidation of old broken Cloudflare cache
+  const cacheKey = `film_v2_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
   
   const cached = await chrome.storage.local.get(cacheKey);
   if (cached[cacheKey] && (Date.now() - cached[cacheKey].timestamp < CACHE_TTL)) {
-    return cached[cacheKey].data;
+    if (cached[cacheKey].data && cached[cacheKey].data.rating !== null) {
+      return cached[cacheKey].data;
+    }
   }
 
   try {
-    const lbResult = await resolveLetterboxdSearch(title, year);
-    if (!lbResult || !lbResult.url) throw new Error('Film not found on Letterboxd');
+    const lbResult = await guessLetterboxdSlug(title, year);
+    if (!lbResult || !lbResult.url) throw new Error('Film not found or Cloudflare blocked');
 
-    console.log(`[LetterMarkd] Found slug: ${lbResult.url}`);
+    console.log(`[LetterMarkd] Resolved slug: ${lbResult.url}`);
 
     const response = await fetch(lbResult.url);
     const html = await response.text();
@@ -39,44 +42,53 @@ async function handleFetchRating(title, year) {
     console.log(`[LetterMarkd] Scraped rating: ${rating}`);
 
     const result = {
-      rating: rating, // Should be null or string "4.15"
+      rating: rating,
       url: response.url,
       title: lbResult.title || title,
       year: lbResult.year || year,
       genres: []
     };
 
-    await chrome.storage.local.set({ [cacheKey]: { data: result, timestamp: Date.now() } });
+    if (rating !== null && rating !== undefined) {
+      await chrome.storage.local.set({ [cacheKey]: { data: result, timestamp: Date.now() } });
+    }
     return result;
   } catch (error) {
     return { rating: null, error: error.message };
   }
 }
 
-async function resolveLetterboxdSearch(title, year) {
-  const searchUrl = `https://letterboxd.com/search/films/${encodeURIComponent(title)}/`;
-  const res = await fetch(searchUrl);
-  const html = await res.text();
+async function guessLetterboxdSlug(title, year) {
+  // Letterboxd's search endpoint is heavily protected by Cloudflare Turnstile challenges.
+  // MV3 Service Workers cannot solve JS captchas, so fetch() fails silently.
+  // Instead, we predict the canonical slug and hit the unprotected /film/ page directly.
   
-  const filmResults = [];
-  const regex = /href="(\/film\/[^"]+\/)"[^>]*>([^<]+)<\/a>\s*(?:<small class="metadata">)?(\d{4})?/g;
-  let match;
+  let baseSlug = title.toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/['".,;:!?()[\]{}]/g, '') // remove punctuation
+    .replace(/[^a-z0-9]+/g, '-')       // replace spaces/symbols with hyphens
+    .replace(/^-+|-+$/g, '');          // trim leading/trailing hyphens
+
+  const attempts = [
+    `https://letterboxd.com/film/${baseSlug}/`
+  ];
   
-  while ((match = regex.exec(html)) !== null) {
-    filmResults.push({
-      url: `https://letterboxd.com${match[1]}`,
-      title: match[2],
-      year: match[3] || null
-    });
-    if (filmResults.length >= 3) break;
+  if (year) {
+    attempts.push(`https://letterboxd.com/film/${baseSlug}-${year}/`);
   }
 
-  if (filmResults.length === 0) return null;
-  if (year) {
-    const yearMatch = filmResults.find(f => f.year === year.toString());
-    if (yearMatch) return yearMatch;
+  for (const url of attempts) {
+    try {
+      const res = await fetch(url);
+      if (res.status === 200) {
+        return { url, title, year };
+      }
+    } catch (e) {
+      console.error('[LetterMarkd] Slug fetch error:', e);
+    }
   }
-  return filmResults[0];
+  
+  return null;
 }
 
 function parseRatingFromJsonLd(html) {

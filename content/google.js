@@ -20,29 +20,35 @@ async function getRating(title, year) {
 
 
 async function injectKnowledgePanel() {
-  const panel = document.querySelector('.kp-wholepage, .P69eS, #rhs');
-  if (!panel || panel.querySelector('.lm-google-kp-row')) return;
+  if (document.querySelector('.lm-google-kp-row')) return;
 
-  const titleEl = panel.querySelector('div[data-attrid="title"], h2[data-attrid="title"]');
+  // Google's new layout puts the title in the main column, not always in #rhs
+  const titleEl = document.querySelector('h2[data-attrid="title"], div[data-attrid="title"], h2[data-md="1"]');
   if (!titleEl) return;
 
-  const title = titleEl.innerText;
-  const data = await getRating(title);
+  const rawTitle = titleEl.innerText;
+  // Clean title (sometimes Google appends "Overview" or other text)
+  const cleanTitle = rawTitle.split('\n')[0].trim();
+  
+  const data = await getRating(cleanTitle);
   
   if (data && data.rating) {
     const row = document.createElement('div');
     row.className = 'lm-google-kp-row';
+    row.style.cssText = 'margin-top: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #ebebeb;';
     row.innerHTML = `
-      <a href="${data.url}" target="_blank" title="Matched as: ${data.title}" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:8px;">
-        <span style="background:#14181c; color:#00e054; padding:2px 6px; border-radius:4px; font-size:12px; border:1px solid #00e054; font-weight:bold;">Letterboxd</span>
-        <span style="color:#00e054; font-weight:bold;">★ ${data.rating}</span>
+      <a href="${data.url}" target="_blank" title="Matched as: ${data.title}" style="text-decoration:none; color:inherit; display:inline-flex; align-items:center; gap:8px;">
+        <span style="background:#14181c; color:#00e054; padding:4px 8px; border-radius:6px; font-size:13px; border:1px solid #00e054; font-weight:bold;">Letterboxd</span>
+        <span style="color:#00e054; font-weight:bold; font-size: 14px;">★ ${data.rating}</span>
         <span style="font-size:12px; color:#70757a;">(${data.year || 'Film'})</span>
       </a>
     `;
+    
+    // Inject right below the title/subtitle block
     titleEl.parentElement.appendChild(row);
   }
-
 }
+
 
 async function injectOrganicResults() {
   // Target ONLY the main result containers within the results list
