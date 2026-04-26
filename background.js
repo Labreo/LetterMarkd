@@ -11,7 +11,7 @@ const DEFAULT_ALLOWLIST = [
 chrome.runtime.onInstalled.addListener(() => {
   // Clear old version caches (v1 to v11)
   chrome.storage.local.get(null, (items) => {
-    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v12'));
+    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v13'));
     if (keysToRemove.length > 0) {
       chrome.storage.local.remove(keysToRemove);
       console.log(`[LetterMarkd] Cleared ${keysToRemove.length} old cache entries.`);
@@ -34,7 +34,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function handleFetchRating(title, year, tabId) {
-  const cacheKey = `film_v12_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
+  const cacheKey = `film_v13_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
   const cached = await chrome.storage.local.get(cacheKey);
   
   if (cached[cacheKey] && (Date.now() - cached[cacheKey].timestamp < CACHE_TTL)) {
@@ -49,6 +49,24 @@ async function handleFetchRating(title, year, tabId) {
     const html = await response.text();
 
     const parsedData = parseRatingFromJsonLd(html);
+
+    // HTML Fallbacks for missing JSON-LD data (using regex for background script)
+    if (!parsedData.description) {
+      const descMatch = html.match(/<meta name="description" content="(.*?)"/i) || 
+                        html.match(/<meta property="og:description" content="(.*?)"/i);
+      if (descMatch) {
+        let desc = descMatch[1].trim();
+        // Clean up SEO suffix
+        desc = desc.split('. Reviews, film + cast')[0].trim();
+        parsedData.description = desc;
+      }
+    }
+    
+    if (!parsedData.tagline) {
+      const taglineMatch = html.match(/<section class="section production-synopsis">[\s\S]*?<h2 class="tagline">(.*?)<\/h2>/i);
+      if (taglineMatch) parsedData.tagline = taglineMatch[1].trim();
+    }
+
     const reviews = parseReviews(html);
     let watchProviders = parseWatchProviders(html);
     
@@ -138,7 +156,11 @@ function parseRatingFromJsonLd(html) {
         ratingCount: ar.ratingCount ? parseInt(ar.ratingCount).toLocaleString() : null,
         reviewCount: ar.reviewCount ? parseInt(ar.reviewCount).toLocaleString() : null,
         image: typeof imageObj === 'string' ? imageObj : (imageObj?.url || null),
-        director, cast, genres
+        director, 
+        cast, 
+        genres,
+        description: obj.description || null,
+        tagline: obj.tagline || null
       };
     };
     return Array.isArray(data) ? extract(data.find(i => i['@type'] === 'Movie')) : extract(data);

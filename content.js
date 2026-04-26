@@ -252,17 +252,15 @@ function renderFullPanel(data, query) {
   const logoSvg = `
     <svg class="lm-header-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="ribbon-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id="brand-grad-vertical" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:#ff8000" />
           <stop offset="50%" style="stop-color:#00e054" />
-          <stop offset="100%" style="stop-color:#40bcf4" />
+          <stop offset="100%" style="stop-color:#00b0ff" />
         </linearGradient>
       </defs>
       <rect width="100" height="100" rx="22" fill="#12161b" />
-      <!-- The White L -->
       <path d="M32 28 V72 H68" stroke="white" stroke-width="11" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-      <!-- The Branded Ribbon -->
-      <path d="M50 25 V55 L60 48 L70 55 V25 Z" fill="url(#ribbon-grad)" />
+      <path d="M50 25 V55 L60 48 L70 55 V25 Z" fill="url(#brand-grad-vertical)" />
     </svg>
   `;
 
