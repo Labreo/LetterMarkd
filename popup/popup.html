@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LetterMarkd</title>
+  <style>
+    :root {
+      --bg: #14181c;
+      --card: #1b2228;
+      --accent: #00e054;
+      --text: #ffffff;
+      --text-dim: #9ab;
+    }
+
+    body {
+      width: 320px;
+      margin: 0;
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .content {
+      padding: 16px;
+    }
+
+    .status-card {
+      background: var(--card);
+      padding: 12px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .menu-item:hover {
+      color: var(--accent);
+    }
+
+    .menu-item:last-child {
+      border-bottom: none;
+    }
+
+    .footer {
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.2);
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .pro-badge {
+      background: linear-gradient(135deg, #ff9000, #ff4e00);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: white;
+      font-weight: bold;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">Letter<span>Markd</span></div>
+    <div class="pro-badge">PRO</div>
+  </div>
+
+  <div class="content">
+    <div class="status-card">
+      <div class="status-dot"></div>
+      <div>
+        <div style="font-size: 14px; font-weight: 600;">Connected to Letterboxd</div>
+        <div style="font-size: 12px; color: var(--text-dim);">@sanjaywaradkar</div>
+      </div>
+    </div>
+
+    <div class="menu-item">
+      <span>Enable on Netflix</span>
+      <input type="checkbox" checked>
+    </div>
+    <div class="menu-item">
+      <span>Enable on Prime Video</span>
+      <input type="checkbox" checked>
+    </div>
+    <div class="menu-item">
+      <span>Show Watchlist Status</span>
+      <input type="checkbox" checked>
+    </div>
+    <div class="menu-item" style="margin-top: 12px; color: var(--text-dim);">
+      <span>Advanced Settings</span>
+      <span>→</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>v0.1.0</span>
+    <span>View on Letterboxd.com</span>
+  </div>
+</body>
+</html>

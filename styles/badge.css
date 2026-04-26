@@ -1,0 +1,49 @@
+/* LetterMarkd Badge Styles */
+.lettermarkd-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 24, 28, 0.85); /* Letterboxd Dark Grey */
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 8px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+  z-index: 9999;
+  position: relative;
+}
+
+.lettermarkd-badge:hover {
+  background: #00e054; /* Letterboxd Green */
+  color: #14181c;
+  transform: scale(1.05);
+}
+
+.lettermarkd-badge.high-rating {
+  border-left: 3px solid #00e054;
+}
+
+.lettermarkd-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #14181c;
+  color: #fff;
+  padding: 8px;
+  border-radius: 8px;
+  width: 200px;
+  display: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  font-size: 11px;
+}
+
+.lettermarkd-badge:hover .lettermarkd-tooltip {
+  display: block;
+}
