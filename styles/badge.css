@@ -156,3 +156,78 @@
   text-decoration: underline;
   margin-top: 12px;
 }
+
+/* --- Pro Features --- */
+
+.lm-pro-section {
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+/* Friend Avatars */
+.lm-friends {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.lm-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #1A1A2E;
+  background: #334;
+}
+
+.lm-friends-text {
+  font-size: 10px;
+  color: #AAAAAA;
+  margin-left: 4px;
+}
+
+/* Personal Rating (Stars) */
+.lm-personal-rating {
+  margin-bottom: 12px;
+}
+
+.lm-you-label {
+  font-size: 11px;
+  color: #AAAAAA;
+  margin-bottom: 4px;
+}
+
+.lm-star-input {
+  display: flex;
+  gap: 2px;
+  color: #444; /* Empty star color */
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.lm-star-input .active {
+  color: #ff9000; /* Letterboxd Orange for personal ratings */
+}
+
+/* Quick Review */
+.lm-review-field {
+  width: 100%;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: #fff;
+  padding: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 40px;
+  margin-top: 8px;
+  box-sizing: border-box;
+}
+
+.lm-review-field:focus {
+  outline: none;
+  border-color: #00e054;
+}
+
