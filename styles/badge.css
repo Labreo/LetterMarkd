@@ -1,6 +1,5 @@
-/* LetterMarkd Refined Badge Styles */
+/* LetterMarkd Hover Card Styles */
 
-/* The Pill Badge */
 .lettermarkd-badge {
   position: absolute;
   top: 6px;
@@ -10,9 +9,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.7); /* 70% opacity black */
+  background: rgba(0, 0, 0, 0.7);
   color: #ffffff;
-  border-radius: 11px; /* Perfect pill shape */
+  border-radius: 11px;
   font-family: Arial, sans-serif;
   font-size: 12px;
   font-weight: 500;
@@ -20,53 +19,140 @@
   z-index: 9999;
   backdrop-filter: blur(2px);
   border: 0.5px solid rgba(255, 255, 255, 0.15);
-  pointer-events: auto;
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease;
+  cursor: pointer;
 }
 
-.lettermarkd-badge:hover {
-  background: #00e054; /* Letterboxd Green on hover */
-  color: #14181c;
-  transform: scale(1.1);
-}
-
-.lettermarkd-badge span {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-/* Tooltip (Hover Only) */
-.lettermarkd-tooltip {
+/* The Expandable Card */
+.lettermarkd-card {
   position: absolute;
-  top: 28px;
-  left: 0;
-  background: #14181c;
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(-5px);
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  top: 0;
+  left: 54px; /* Default: right of badge */
+  width: 240px;
+  max-height: 320px;
+  background: #1A1A2E;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
   border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-10px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms;
+  overflow-y: auto;
+  pointer-events: auto;
 }
 
-.lettermarkd-badge:hover .lettermarkd-tooltip {
+/* Animation state */
+.lettermarkd-badge:hover .lettermarkd-card,
+.lettermarkd-card:hover {
   opacity: 1;
-  transform: translateY(0);
+  visibility: visible;
+  transform: translateX(0);
 }
 
-/* Low Rating Fade */
-.lettermarkd-low-rating-poster {
-  opacity: 0.5 !important;
-  transition: opacity 0.3s ease;
+/* Smart Positioning: Flip to left */
+.lettermarkd-card.flip-left {
+  left: auto;
+  right: 54px;
+  transform: translateX(10px);
 }
 
-/* Utility to ensure parent is relative for absolute positioning */
-.lettermarkd-container {
-  position: relative !important;
+.lettermarkd-card.flip-left:hover {
+  transform: translateX(0);
+}
+
+/* Card Content Hierarchy */
+.lm-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.lm-meta {
+  font-size: 12px;
+  color: #AAAAAA;
+  margin-bottom: 12px;
+}
+
+.lm-rating-section {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.lm-stars {
+  font-size: 20px;
+  font-weight: 700;
+  color: #00e054;
+}
+
+.lm-count {
+  font-size: 11px;
+  color: #AAAAAA;
+}
+
+.lm-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.lm-genre-tag {
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  color: #AAAAAA;
+  border: 0.5px solid rgba(255,255,255,0.1);
+}
+
+/* Buttons */
+.lm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lm-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.lm-btn:hover {
+  background: #fff;
+  color: #1A1A2E;
+}
+
+.lm-btn-primary {
+  background: #00e054;
+  border-color: #00e054;
+  color: #14181c;
+}
+
+.lm-btn-primary:hover {
+  background: #00c048;
+  border-color: #00c048;
+  color: #14181c;
+}
+
+.lm-link {
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  color: #AAAAAA;
+  text-decoration: underline;
+  margin-top: 12px;
 }
