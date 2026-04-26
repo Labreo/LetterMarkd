@@ -49,37 +49,49 @@ async function injectKnowledgePanel() {
  * Organic Results Injection
  */
 async function injectOrganicResults() {
-  const searchResults = document.querySelectorAll('h3');
-  
-  for (const h3 of searchResults) {
-    if (h3.querySelector('.lm-google-organic-pill')) continue;
+  const searchContainer = document.querySelector('#search');
+  if (!searchContainer) return;
 
-    const titleText = h3.innerText;
-    
-    // Simple heuristic: if the title contains common movie patterns or the URL looks like IMDb/Letterboxd/Netflix
-    const parentLink = h3.closest('a');
+  const results = searchContainer.querySelectorAll('div.g:not(.lm-processed), .MjjYud:not(.lm-processed)');
+  
+  for (const container of results) {
+    // Skip if hidden, too small (ghost elements), or non-organic
+    if (container.offsetHeight === 0 || container.offsetWidth === 0) continue;
+    if (container.closest('.ULSxyf, .ezY8Gf, .kno-vrt-t')) continue;
+
+    const titleLink = container.querySelector('a h3, h3');
+    if (!titleLink || titleLink.querySelector('.lm-google-organic-pill')) continue;
+
+    const parentLink = titleLink.closest('a');
     if (!parentLink) continue;
 
     const href = parentLink.href;
-    const isMovieSite = /imdb\.com|letterboxd\.com|netflix\.com|rottentomatoes\.com/.test(href);
+    const isMovieSite = /imdb\.com|letterboxd\.com|netflix\.com|rottentomatoes\.com|metacritic\.com/.test(href);
 
     if (isMovieSite) {
-      // Extract clean title (remove " - IMDb", etc.)
-      const cleanTitle = titleText.split(' - ')[0].split(' (')[0];
+      container.classList.add('lm-processed');
+      
+      const rawTitle = titleLink.innerText;
+      const cleanTitle = rawTitle.split(' - ')[0].split(' (')[0].replace(/ \d{4}.*$/, '').trim();
       
       const data = await getRating(cleanTitle);
-      if (data && data.rating && data.rating !== 'N/A') {
-        const pill = document.createElement('a');
-        pill.href = data.url;
-        pill.target = '_blank';
+      
+      // FINAL VALIDATION: Rating must be a valid number and > 0
+      if (data && data.rating && !isNaN(parseFloat(data.rating)) && parseFloat(data.rating) > 0) {
+        const pill = document.createElement('span');
         pill.className = 'lm-google-organic-pill';
+        pill.style.cssText = 'display:inline-flex !important; align-items:center !important; margin-left:8px !important;';
         pill.innerHTML = `★ ${parseFloat(data.rating).toFixed(1)}`;
         
-        h3.appendChild(pill);
+        titleLink.appendChild(pill);
       }
     }
   }
 }
+
+
+
+
 
 // Initial run and observer
 function runInjections() {

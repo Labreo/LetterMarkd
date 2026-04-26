@@ -1,5 +1,4 @@
-// LetterMarkd Service Worker - Core Resolution Engine
-const TMDB_API_KEY = 'YOUR_TMDB_API_KEY_HERE'; // Replace with real key
+// LetterMarkd Service Worker - Search-First Resolution Engine (TMDb-Free)
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -16,32 +15,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }
-
-  if (request.type === 'PERFORM_ACTION') {
-    handleWriteAction(request.action, request.filmId)
-      .then(sendResponse)
-      .catch(err => sendResponse({ success: false, error: err.message }));
-    return true;
-  }
 });
-
-async function handleWriteAction(action, filmId) {
-  const { authToken } = await chrome.storage.local.get('authToken');
-  if (!authToken) throw new Error('Not authenticated');
-
-  console.log(`Performing ${action} for film ${filmId}`);
-  
-  // Logic to hit api.letterboxd.com or web endpoints
-  // Example for Watchlist:
-  // await fetch('https://api.letterboxd.com/api/v0/watchlist', { 
-  //   method: 'POST', 
-  //   headers: { 'Authorization': `Bearer ${authToken}` },
-  //   body: JSON.stringify({ filmId })
-  // });
-
-  return { success: true };
-}
-
 
 async function handleFetchRating(title, year) {
   const cacheKey = `film_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
@@ -53,21 +27,12 @@ async function handleFetchRating(title, year) {
   }
 
   try {
-    // 2. TMDb Resolution
-    const tmdbData = await resolveTMDb(title, year);
-    let lbUrl = '';
+    // 2. Resolve Title to Letterboxd Slug (using LB Search)
+    const lbResult = await resolveLetterboxdSearch(title, year);
+    if (!lbResult || !lbResult.url) throw new Error('Film not found on Letterboxd');
 
-    if (tmdbData && tmdbData.imdb_id) {
-      // Primary: Use IMDb redirect
-      lbUrl = `https://letterboxd.com/imdb/${tmdbData.imdb_id}/`;
-    } else {
-      // Fallback: Use Letterboxd search to find the slug
-      lbUrl = await resolveLetterboxdSlug(title);
-    }
-
-    if (!lbUrl) throw new Error('Could not find Letterboxd page');
-
-    const response = await fetch(lbUrl);
+    // 3. Fetch canonical film page
+    const response = await fetch(lbResult.url);
     if (!response.ok) throw new Error('Letterboxd page fetch failed');
     
     const canonicalUrl = response.url;
@@ -79,9 +44,9 @@ async function handleFetchRating(title, year) {
     const result = {
       rating: rating || 'N/A',
       url: canonicalUrl,
-      title: tmdbData?.title || title,
-      year: tmdbData?.year || year,
-      genres: tmdbData?.genres || []
+      title: lbResult.title || title,
+      year: lbResult.year || year,
+      genres: parseGenresFromHtml(html)
     };
 
     // 5. Caching
@@ -96,46 +61,40 @@ async function handleFetchRating(title, year) {
   }
 }
 
-async function resolveTMDb(title, year) {
-  if (TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
-    return null;
-  }
-
-  let searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`;
-  if (year) searchUrl += `&year=${year}`;
-
-  let searchRes = await fetch(searchUrl);
-  let searchData = await searchRes.json();
-
-  if ((!searchData.results || searchData.results.length === 0) && year) {
-    searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`;
-    searchRes = await fetch(searchUrl);
-    searchData = await searchRes.json();
-  }
-
-  if (!searchData.results || searchData.results.length === 0) return null;
-
-  const topResult = searchData.results[0];
-  const detailUrl = `https://api.themoviedb.org/3/movie/${topResult.id}?api_key=${TMDB_API_KEY}`;
-  const detailRes = await fetch(detailUrl);
-  const detailData = await detailRes.json();
-
-  return {
-    id: topResult.id,
-    imdb_id: detailData.imdb_id,
-    title: detailData.title,
-    year: detailData.release_date ? detailData.release_date.split('-')[0] : null,
-    genres: detailData.genres ? detailData.genres.map(g => g.name) : []
-  };
-}
-
-async function resolveLetterboxdSlug(title) {
+/**
+ * Hits Letterboxd's own search and returns the first matching film result
+ */
+async function resolveLetterboxdSearch(title, year) {
   const searchUrl = `https://letterboxd.com/search/films/${encodeURIComponent(title)}/`;
   try {
     const res = await fetch(searchUrl);
     const html = await res.text();
-    const slugMatch = html.match(/href="(\/film\/[^"]+\/)"/);
-    return slugMatch ? `https://letterboxd.com${slugMatch[1]}` : null;
+    
+    // Pattern to find film results: <span class="film-title-wrapper">...<a href="/film/slug/">Title</a> <small class="metadata">year</small>
+    // We look for multiple results to find the best year match
+    const filmResults = [];
+    const regex = /href="(\/film\/[^"]+\/)"[^>]*>([^<]+)<\/a>\s*(?:<small class="metadata">)?(\d{4})?/g;
+    let match;
+    
+    while ((match = regex.exec(html)) !== null) {
+      filmResults.push({
+        url: `https://letterboxd.com${match[1]}`,
+        title: match[2],
+        year: match[3] || null
+      });
+      if (filmResults.length >= 5) break; // Check first 5 results
+    }
+
+    if (filmResults.length === 0) return null;
+
+    // If we have a target year, find the closest match
+    if (year) {
+      const yearMatch = filmResults.find(f => f.year === year.toString());
+      if (yearMatch) return yearMatch;
+    }
+
+    // Default to the first (most popular/relevant) result
+    return filmResults[0];
   } catch (e) {
     return null;
   }
@@ -147,17 +106,34 @@ function parseRatingFromJsonLd(html) {
     if (!ldJsonMatch) return null;
 
     const data = JSON.parse(ldJsonMatch[1]);
-    if (data.aggregateRating && data.aggregateRating.ratingValue) {
-      return parseFloat(data.aggregateRating.ratingValue).toFixed(1);
+    
+    // Check for standard AggregateRating
+    const ratingValue = data.aggregateRating ? data.aggregateRating.ratingValue : null;
+    if (ratingValue && !isNaN(parseFloat(ratingValue))) {
+      return parseFloat(ratingValue).toFixed(2);
     }
+    
+    // Check for Movie object in array
     if (Array.isArray(data)) {
       const filmObj = data.find(item => item['@type'] === 'Movie');
-      if (filmObj && filmObj.aggregateRating) {
-        return parseFloat(filmObj.aggregateRating.ratingValue).toFixed(1);
+      if (filmObj && filmObj.aggregateRating && !isNaN(parseFloat(filmObj.aggregateRating.ratingValue))) {
+        return parseFloat(filmObj.aggregateRating.ratingValue).toFixed(2);
       }
     }
   } catch (e) {}
-  return null;
+  return null; // Return null if anything fails or is NaN
+}
+
+function parseGenresFromHtml(html) {
+  // Scrape genres from the sidebar links in Letterboxd
+  const genreMatch = html.match(/href="\/films\/genre\/([^/]+)\/"/g);
+  if (genreMatch) {
+    return genreMatch.slice(0, 3).map(m => {
+      const slug = m.match(/genre\/([^/]+)\//)[1];
+      return slug.charAt(0).toUpperCase() + slug.slice(1);
+    });
+  }
+  return [];
 }
 
 async function handleAuthFlow() {
@@ -166,27 +142,19 @@ async function handleAuthFlow() {
   const authUrl = `https://letterboxd.com/api/v0/auth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=write`;
 
   return new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow({
-      url: authUrl,
-      interactive: true
-    }, async (redirectUrl) => {
+    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, async (redirectUrl) => {
       if (chrome.runtime.lastError || !redirectUrl) {
-        reject(new Error(chrome.runtime.lastError?.message || 'User cancelled or failed to auth'));
+        reject(new Error(chrome.runtime.lastError?.message || 'Auth failed'));
         return;
       }
-
       const url = new URL(redirectUrl);
       const code = url.searchParams.get('code');
-      
       if (code) {
-        // Exchange code for token
-        const mockToken = 'lb_token_' + Math.random().toString(36).substr(2);
-        await chrome.storage.local.set({ authToken: mockToken, username: 'LetterboxdUser' });
-        resolve({ success: true, username: 'LetterboxdUser' });
+        await chrome.storage.local.set({ authToken: 'MOCK_TOKEN', username: 'LetterMarkdUser' });
+        resolve({ success: true, username: 'LetterMarkdUser' });
       } else {
-        reject(new Error('No auth code returned'));
+        reject(new Error('No auth code'));
       }
     });
   });
 }
-
