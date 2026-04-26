@@ -1,0 +1,130 @@
+/* LetterMarkd Universal Styles */
+
+#lm-selection-bubble {
+  position: absolute;
+  z-index: 9999999;
+  background: #00e054;
+  color: #14181c;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transform: translateX(-50%) translateY(-100%);
+  margin-top: -8px;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#lm-selection-bubble:hover {
+  transform: translateX(-50%) translateY(-100%) scale(1.05);
+}
+
+#lm-selection-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #00e054 transparent transparent transparent;
+}
+
+#lm-panel {
+  position: absolute;
+  z-index: 9999999;
+  background: #14181c;
+  color: #fff;
+  width: 280px;
+  border-radius: 8px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  transform: translateX(-50%) translateY(-100%);
+  margin-top: -8px;
+  overflow: hidden;
+}
+
+.lm-panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.lm-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #fff;
+  text-decoration: none;
+  display: block;
+}
+
+.lm-panel-title:hover {
+  color: #00e054;
+}
+
+.lm-panel-rating {
+  font-size: 18px;
+  font-weight: 800;
+  color: #00e054;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lm-panel-actions {
+  display: flex;
+  padding: 12px;
+  gap: 8px;
+  background: #1b2228;
+}
+
+.lm-btn {
+  flex: 1;
+  background: #2c3440;
+  color: #fff;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.lm-btn:hover {
+  background: #445566;
+}
+
+.lm-btn-primary {
+  background: #00e054;
+  color: #14181c;
+}
+
+.lm-btn-primary:hover {
+  background: #00c048;
+}
+
+.lm-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #9ab;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+
+.lm-close:hover {
+  color: #fff;
+}

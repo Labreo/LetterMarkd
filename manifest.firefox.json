@@ -11,14 +11,7 @@
   },
   "permissions": [
     "storage",
-    "identity",
-    "https://*.netflix.com/*",
-    "https://*.primevideo.com/*",
-    "https://*.disneyplus.com/*",
-    "https://*.imdb.com/*",
-    "https://www.google.com/*",
-    "https://letterboxd.com/*",
-    "https://api.themoviedb.org/*"
+    "https://letterboxd.com/*"
   ],
   "background": {
     "scripts": ["background.js"],
@@ -26,29 +19,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.netflix.com/*"],
-      "js": ["content/netflix.js"],
-      "css": ["styles/badge.css"]
-    },
-    {
-      "matches": ["https://*.primevideo.com/*", "https://*.amazon.com/*"],
-      "js": ["content/prime.js"],
-      "css": ["styles/badge.css"]
-    },
-    {
-      "matches": ["https://www.google.com/search*"],
-      "js": ["content/google.js"],
-      "css": ["styles/badge.css"]
-    },
-    {
-      "matches": ["https://*.imdb.com/title/*"],
-      "js": ["content/imdb.js"],
-      "css": ["styles/badge.css"]
-    },
-    {
-      "matches": ["https://*.disneyplus.com/*"],
-      "js": ["content/disney.js"],
-      "css": ["styles/badge.css"]
+      "matches": ["<all_urls>"],
+      "exclude_matches": ["https://letterboxd.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
     }
   ],
   "action": {

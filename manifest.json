@@ -4,68 +4,20 @@
   "version": "0.1.0",
   "description": "Letterboxd ratings and actions overlaid on any movie-related webpage.",
   "permissions": [
-    "storage",
-    "identity"
+    "storage"
   ],
   "host_permissions": [
-    "https://*.netflix.com/*",
-    "https://*.primevideo.com/*",
-    "https://*.disneyplus.com/*",
-    "https://*.imdb.com/*",
-    "https://www.google.com/*",
-    "https://letterboxd.com/*",
-    "https://api.themoviedb.org/*"
+    "https://letterboxd.com/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://*.netflix.com/*"
-      ],
-      "js": [
-        "content/netflix.js"
-      ],
-      "css": [
-        "styles/badge.css"
-      ],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://www.google.com/search*"
-      ],
-      "js": [
-        "content/google.js"
-      ],
-      "css": [
-        "styles/badge.css"
-      ],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://*.imdb.com/title/*"
-      ],
-      "js": [
-        "content/imdb.js"
-      ],
-      "css": [
-        "styles/badge.css"
-      ],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://*.disneyplus.com/*"
-      ],
-      "js": [
-        "content/disney.js"
-      ],
-      "css": [
-        "styles/badge.css"
-      ],
+      "matches": ["<all_urls>"],
+      "exclude_matches": ["https://letterboxd.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
       "run_at": "document_idle"
     }
   ],
