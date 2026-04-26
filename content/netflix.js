@@ -106,11 +106,42 @@ async function injectHoverCard() {
           👥 3 friends
         </span>
       </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <button class="lm-action-btn" data-action="watchlist" data-film="${data.title}" style="flex:1; background:#2c3440; color:#fff; border:none; padding:6px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold; transition: background 0.2s;">+ Watchlist</button>
+        <button class="lm-action-btn" data-action="watched" data-film="${data.title}" style="flex:1; background:#2c3440; color:#fff; border:none; padding:6px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold; transition: background 0.2s;">✓ Watched</button>
+      </div>
     `;
 
     metaContainer.appendChild(ratingRow);
+
+    // Bind action buttons
+    const btns = ratingRow.querySelectorAll('.lm-action-btn');
+    btns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const action = btn.getAttribute('data-action');
+        const film = btn.getAttribute('data-film');
+        btn.innerText = 'Wait...';
+        btn.style.opacity = '0.7';
+        chrome.runtime.sendMessage({ type: 'PERFORM_ACTION', action, filmId: film }, (res) => {
+          if (res && res.success) {
+            btn.innerText = action === 'watchlist' ? 'Added!' : 'Marked!';
+            btn.style.background = '#00e054';
+            btn.style.color = '#14181c';
+          } else {
+            btn.innerText = 'Login required';
+            btn.style.background = '#e00054';
+          }
+          btn.style.opacity = '1';
+        });
+      });
+    });
   }
 }
+
 
 /**
  * Main Observer Logic

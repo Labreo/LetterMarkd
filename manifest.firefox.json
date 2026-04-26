@@ -44,6 +44,11 @@
       "matches": ["https://*.imdb.com/title/*"],
       "js": ["content/imdb.js"],
       "css": ["styles/badge.css"]
+    },
+    {
+      "matches": ["https://*.disneyplus.com/*"],
+      "js": ["content/disney.js"],
+      "css": ["styles/badge.css"]
     }
   ],
   "action": {
