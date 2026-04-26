@@ -194,10 +194,25 @@ async function showPanel(rect, query) {
       </div>
       <div class="lm-panel-body">
         <div id="lm-tab-info" class="lm-tab-content lm-active">
-          ${data.director ? `<div class="lm-meta-item"><span class="lm-meta-label">Directed by</span>${data.director}</div>` : ''}
-          ${data.cast ? `<div class="lm-meta-item"><span class="lm-meta-label">Starring</span>${data.cast}</div>` : ''}
-          <div class="lm-meta-item">${(data.genres || []).map(g => `<span class="lm-genre-tag">${g}</span>`).join('')}</div>
-          ${data.watchProviders?.length ? `<div class="lm-meta-item" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.05);padding-top:12px;"><span class="lm-meta-label">Where to Watch</span><div class="lm-watch-list">${data.watchProviders.map(p => `<span class="lm-watch-item">${p}</span>`).join('')}</div></div>` : ''}
+          <div class="lm-info-list">
+            <div class="lm-info-item"><strong>Director:</strong> ${data.director || 'N/A'}</div>
+            <div class="lm-info-item"><strong>Cast:</strong> ${data.cast || 'N/A'}</div>
+            <div class="lm-info-item"><strong>Genres:</strong> ${data.genres?.join(', ') || 'N/A'}</div>
+            <div class="lm-info-item" style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 12px; padding-top: 12px;">
+              <strong>IMDb Rating:</strong> <span style="color:var(--accent); font-weight: bold;">★ ${data.extraStats?.imdbRating || 'N/A'}</span>
+            </div>
+            <div class="lm-info-item"><strong>Box Office:</strong> <span style="color: #fff;">${data.extraStats?.boxOffice || 'N/A'}</span></div>
+            <div class="lm-info-item"><strong>Budget:</strong> <span style="color: #fff;">${data.extraStats?.budget || 'N/A'}</span></div>
+          </div>
+          
+          ${data.watchProviders?.length ? `
+            <div class="lm-where-watch" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+              <div style="font-size: 11px; color: #9ab; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">Where to Watch</div>
+              <div class="lm-watch-list">
+                ${data.watchProviders.map(p => `<span class="lm-watch-item">${p}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
         </div>
         <div id="lm-tab-reviews" class="lm-tab-content">
           ${(data.reviews || []).map((r, i) => `

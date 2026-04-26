@@ -9,9 +9,9 @@ const DEFAULT_ALLOWLIST = [
 ];
 
 chrome.runtime.onInstalled.addListener(() => {
-  // Clear old version caches (v1 to v7)
+  // Clear old version caches (v1 to v9)
   chrome.storage.local.get(null, (items) => {
-    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v8'));
+    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v10'));
     if (keysToRemove.length > 0) {
       chrome.storage.local.remove(keysToRemove);
       console.log(`[LetterMarkd] Cleared ${keysToRemove.length} old cache entries.`);
@@ -34,7 +34,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function handleFetchRating(title, year) {
-  const cacheKey = `film_v8_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
+  const cacheKey = `film_v10_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
   const cached = await chrome.storage.local.get(cacheKey);
   if (cached[cacheKey] && (Date.now() - cached[cacheKey].timestamp < CACHE_TTL)) {
     return cached[cacheKey].data;
@@ -51,18 +51,29 @@ async function handleFetchRating(title, year) {
     const reviews = parseReviews(html);
     let watchProviders = parseWatchProviders(html);
     
-    // CSI Fetch for dynamic watch data
+    // Stage 2: CSI Fetch for dynamic watch data if main page had none
     if (watchProviders.length === 0) {
       try {
         const slug = lbResult.url.split('/film/')[1].split('/')[0];
-        const csiUrl = `https://letterboxd.com/csi/film/${slug}/justwatch/`;
+        const csiUrl = `https://letterboxd.com/csi/film/${slug}/justwatch/?esiAllowUser=true&esiAllowCountry=true`;
         const csiRes = await fetch(csiUrl);
         const csiHtml = await csiRes.text();
         watchProviders = parseWatchProviders(csiHtml);
       } catch (e) {}
     }
 
-    const result = { ...parsedData, reviews, watchProviders, url: lbResult.url, title: lbResult.title, year: lbResult.year };
+    // Stage 3: Extra Stats (IMDb & Mojo)
+    let extraStats = { imdbRating: null, boxOffice: null, budget: null };
+    const imdbId = extractImdbId(html);
+    if (imdbId) {
+      const [imdbData, mojoData] = await Promise.all([
+        fetchImdbRating(imdbId).catch(() => ({ imdbRating: null })),
+        fetchMojoFinancials(imdbId).catch(() => ({ boxOffice: null, budget: null }))
+      ]);
+      extraStats = { ...imdbData, ...mojoData };
+    }
+
+    const result = { ...parsedData, reviews, watchProviders, extraStats, url: lbResult.url, title: lbResult.title, year: lbResult.year };
     chrome.storage.local.set({ [cacheKey]: { data: result, timestamp: Date.now() } });
     return result;
   } catch (e) { return { error: e.message }; }
@@ -164,21 +175,68 @@ function parseReviews(html) {
   return reviews;
 }
 
-function parseWatchProviders(html) {
-  const providers = [];
+function extractImdbId(html) {
+  const match = html.match(/imdb\.com\/title\/(tt\d+)/);
+  return match ? match[1] : null;
+}
+
+async function fetchImdbRating(id) {
   try {
-    // Look for any title containing Stream/Rent/Buy from...
-    const matches = html.match(/title="[^"]*(Stream|Rent|Buy) from ([^"]+)"/g) || [];
-    
-    for (const match of matches) {
-      const nameMatch = match.match(/from (.*?)"/);
-      if (nameMatch) {
-        const name = nameMatch[1].replace(/ on .*/, '').trim();
-        if (!providers.includes(name) && providers.length < 5) {
-          providers.push(name);
-        }
-      }
+    const res = await fetch(`https://www.imdb.com/title/${id}/`);
+    const html = await res.text();
+    const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    if (ldMatch) {
+      const data = JSON.parse(ldMatch[1]);
+      return { imdbRating: data.aggregateRating?.ratingValue || null };
     }
   } catch (e) {}
-  return providers;
+  return { imdbRating: null };
+}
+
+async function fetchMojoFinancials(id) {
+  try {
+    const res = await fetch(`https://www.boxofficemojo.com/title/${id}/`);
+    const html = await res.text();
+    let boxOffice = null;
+    let budget = null;
+
+    const wwMatch = html.match(/Worldwide<\/span><span class="money">([^<]+)<\/span>/);
+    if (wwMatch) boxOffice = wwMatch[1];
+
+    const bMatch = html.match(/Budget<\/span><span class="money">([^<]+)<\/span>/);
+    if (bMatch) budget = bMatch[1];
+
+    return { boxOffice, budget };
+  } catch (e) {}
+  return { boxOffice: null, budget: null };
+}
+
+function parseWatchProviders(html) {
+  const providers = new Set();
+  try {
+    // Stage 1: Already handled in handleFetchRating for main page, 
+    // but this function is also called for CSI.
+    
+    // Look for standard title attributes (Stream/Rent/Buy)
+    const titleMatches = html.match(/title="[^"]*(Stream|Rent|Buy) from ([^"]+)"/g) || [];
+    titleMatches.forEach(m => {
+      const match = m.match(/from (.*?)"/);
+      if (match) providers.add(match[1].replace(/ on .*/, '').trim());
+    });
+
+    // Look for data-track attributes
+    const trackMatches = html.match(/data-track-action="([^"]+)"/g) || [];
+    trackMatches.forEach(m => {
+      const name = m.match(/"([^"]+)"/)[1];
+      if (!['Buy', 'Rent', 'Stream', 'All'].includes(name)) providers.add(name);
+    });
+
+    // Look for Alt tags in watch images
+    const altMatches = html.match(/alt="Watch (.*?) on/g) || [];
+    altMatches.forEach(m => {
+      const match = m.match(/Watch (.*?) on/);
+      if (match) providers.add(match[1].trim());
+    });
+  } catch (e) {}
+  return Array.from(providers).slice(0, 5);
 }
