@@ -1,4 +1,4 @@
-// LetterMarkd Service Worker - Smart Build
+// LetterMarkd Service Worker - Final Scraper Build
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 const DEFAULT_ALLOWLIST = [
@@ -9,13 +9,18 @@ const DEFAULT_ALLOWLIST = [
 ];
 
 chrome.runtime.onInstalled.addListener(() => {
+  // Clear old version caches (v1 to v6)
+  chrome.storage.local.get(null, (items) => {
+    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v7'));
+    if (keysToRemove.length > 0) {
+      chrome.storage.local.remove(keysToRemove);
+      console.log(`[LetterMarkd] Cleared ${keysToRemove.length} old cache entries.`);
+    }
+  });
+
   chrome.storage.local.get(['allowlist', 'blocklist'], (result) => {
-    if (!result.allowlist) {
-      chrome.storage.local.set({ allowlist: DEFAULT_ALLOWLIST });
-    }
-    if (!result.blocklist) {
-      chrome.storage.local.set({ blocklist: [] });
-    }
+    if (!result.allowlist) chrome.storage.local.set({ allowlist: DEFAULT_ALLOWLIST });
+    if (!result.blocklist) chrome.storage.local.set({ blocklist: [] });
   });
 });
 
@@ -29,8 +34,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function handleFetchRating(title, year) {
-  const cacheKey = `film_v6_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
-  
+  const cacheKey = `film_v7_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
   const cached = await chrome.storage.local.get(cacheKey);
   if (cached[cacheKey] && (Date.now() - cached[cacheKey].timestamp < CACHE_TTL)) {
     return cached[cacheKey].data;
@@ -78,12 +82,10 @@ async function guessLetterboxdSlug(title, year) {
   const base = toSlug(cleanTitle);
   attempts.add(base);
   if (cleanTitle.includes('&')) attempts.add(toSlug(cleanTitle.replace(/&/g, 'and')));
-  
   if (detectedYear) {
     const currentVars = Array.from(attempts);
     currentVars.forEach(v => attempts.add(`${v}-${detectedYear}`));
   }
-
   const currentVars = Array.from(attempts);
   currentVars.forEach(v => {
     if (v.startsWith('the-')) attempts.add(v.replace(/^the-/, ''));
@@ -115,8 +117,8 @@ function parseRatingFromJsonLd(html) {
       const imageObj = obj.image ? (Array.isArray(obj.image) ? obj.image[0] : obj.image) : null;
       return {
         rating: (ar.ratingValue && !isNaN(parseFloat(ar.ratingValue))) ? parseFloat(ar.ratingValue).toFixed(2) : null,
-        ratingCount: ar.ratingCount ? ar.ratingCount.toLocaleString() : null,
-        reviewCount: ar.reviewCount ? ar.reviewCount.toLocaleString() : null,
+        ratingCount: ar.ratingCount ? parseInt(ar.ratingCount).toLocaleString() : null,
+        reviewCount: ar.reviewCount ? parseInt(ar.reviewCount).toLocaleString() : null,
         image: typeof imageObj === 'string' ? imageObj : (imageObj?.url || null),
         director, cast, genres
       };
@@ -128,26 +130,32 @@ function parseRatingFromJsonLd(html) {
 function parseReviews(html) {
   const reviews = [];
   try {
-    const reviewRegex = /<article class="production-viewing([\s\S]*?)<\/article>/g;
-    let match;
-    while ((match = reviewRegex.exec(html)) !== null && reviews.length < 3) {
-      const block = match[1];
+    // Robust review block detection based on provided HTML
+    const reviewBlocks = html.match(/<article class="production-viewing([\s\S]*?)<\/article>/g) || [];
+    
+    for (const block of reviewBlocks) {
+      if (reviews.length >= 3) break;
+      
       const authorMatch = block.match(/<strong class="displayname">(.*?)<\/strong>/);
       const ratingMatch = block.match(/aria-label="(.*?)"/);
       const isSpoiler = block.includes('js-spoiler-container') || block.includes('contains spoilers');
       
       let text = '';
-      const hiddenTextMatch = block.match(/<div class="js-review-body[^>]*?>([\s\S]*?)<\/div>/);
-      const normalTextMatch = block.match(/<div class="body-text[^>]*?>\s*<p>(.*?)<\/p>/s);
+      // Extract from hidden body if spoiler, otherwise normal body
+      const bodyMatch = block.match(/<div[^>]*class="[^"]*js-review-body[^"]*"[^>]*>([\s\S]*?)<\/div>/) ||
+                        block.match(/<div[^>]*class="[^"]*body-text[^"]*"[^>]*>([\s\S]*?)<\/div>/);
       
-      if (hiddenTextMatch) text = hiddenTextMatch[1];
-      else if (normalTextMatch) text = normalTextMatch[1];
+      if (bodyMatch) {
+        text = bodyMatch[1].replace(/<[^>]*>?/gm, '').replace(/&hellip;/g, '...').trim();
+        // Clean up redundant whitespace
+        text = text.replace(/\s+/g, ' ');
+      }
 
-      if (text) {
+      if (text && authorMatch) {
         reviews.push({
-          author: authorMatch ? authorMatch[1] : 'Member',
+          author: authorMatch[1],
           rating: ratingMatch ? ratingMatch[1] : null,
-          text: text.replace(/<[^>]*>?/gm, '').trim(),
+          text: text.length > 300 ? text.substring(0, 300) + '...' : text,
           isSpoiler: !!isSpoiler
         });
       }
@@ -159,12 +167,15 @@ function parseReviews(html) {
 function parseWatchProviders(html) {
   const providers = [];
   try {
+    // Look for JustWatch attributes or standard titles
     const links = html.match(/title="(Stream|Rent|Buy) from (.*?)"/g);
     if (links) {
-      links.forEach(l => {
+      for (const l of links) {
         const name = l.match(/from (.*?)"/)[1].replace(/ on .*/, '').trim();
-        if (!providers.includes(name) && providers.length < 5) providers.push(name);
-      });
+        if (!providers.includes(name) && providers.length < 5) {
+          providers.push(name);
+        }
+      }
     }
   } catch (e) {}
   return providers;

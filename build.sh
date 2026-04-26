@@ -19,6 +19,7 @@ prepare_build() {
     cp content.css "$target/content.css"
     cp -r popup/ "$target/popup/"
     cp -r icons/ "$target/icons/"
+    cp -r options/ "$target/options/"
     
     # Copy background.js (no injection needed anymore)
     cp background.js "$target/background.js"
