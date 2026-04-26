@@ -2,15 +2,16 @@
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'FETCH_RATING') {
-    console.log(`[LetterMarkd] Request for: ${request.title}`);
-    handleFetchRating(request.title, request.year)
+  if (request.type === 'SEARCH_FILM') {
+    const query = request.query;
+    console.log(`[LetterMarkd] Request for: ${query}`);
+    handleFetchRating(query, null)
       .then(res => {
-        console.log(`[LetterMarkd] Response for ${request.title}:`, res);
+        console.log(`[LetterMarkd] Response for ${query}:`, res);
         sendResponse(res);
       })
       .catch(err => {
-        console.error(`[LetterMarkd] Error for ${request.title}:`, err);
+        console.error(`[LetterMarkd] Error for ${query}:`, err);
         sendResponse({ error: err.message });
       });
     return true;
