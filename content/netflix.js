@@ -27,6 +27,14 @@ function createCard(data) {
 
   const displayRating = parseFloat(data.rating).toFixed(2);
 
+  // Pro Simulation Data (In reality, this comes from background/storage)
+  const isPro = true; 
+  const personalRating = data.personalRating || 0;
+  const friends = data.friends || [
+    { name: 'Alex', avatar: '' },
+    { name: 'Sam', avatar: '' }
+  ];
+
   card.innerHTML = `
     <div class="lm-title">${data.title}</div>
     <div class="lm-meta">${data.year || ''} • Directed by ...</div>
@@ -43,6 +51,24 @@ function createCard(data) {
       <button class="lm-btn" data-action="watched">✓ Mark Watched</button>
     </div>
 
+    ${isPro ? `
+      <div class="lm-pro-section">
+        <div class="lm-friends">
+          ${friends.map(f => `<div class="lm-avatar" title="${f.name}"></div>`).join('')}
+          <span class="lm-friends-text">${friends.length} friends watched</span>
+        </div>
+
+        <div class="lm-personal-rating">
+          <div class="lm-you-label">You: ${personalRating ? '★'.repeat(Math.floor(personalRating)) : 'Rate this film'}</div>
+          <div class="lm-star-input">
+            ${[1,2,3,4,5].map(i => `<span data-value="${i}" class="${i <= personalRating ? 'active' : ''}">★</span>`).join('')}
+          </div>
+        </div>
+
+        <textarea class="lm-review-field" placeholder="Write a quick review..."></textarea>
+      </div>
+    ` : ''}
+
     <a href="${data.url}" target="_blank" class="lm-link">Open on Letterboxd</a>
   `;
 
@@ -50,7 +76,7 @@ function createCard(data) {
   card.onclick = (e) => e.stopPropagation();
 
   // Action listeners
-  card.querySelectorAll('button').forEach(btn => {
+  card.querySelectorAll('.lm-actions button').forEach(btn => {
     btn.onclick = (e) => {
       const action = btn.dataset.action;
       chrome.runtime.sendMessage({ type: 'PERFORM_ACTION', action, filmId: data.imdb_id });
@@ -59,8 +85,29 @@ function createCard(data) {
     };
   });
 
+  // Star Rating Interaction
+  const stars = card.querySelectorAll('.lm-star-input span');
+  stars.forEach(star => {
+    star.onclick = () => {
+      const val = parseInt(star.dataset.value);
+      stars.forEach((s, idx) => s.classList.toggle('active', idx < val));
+      chrome.runtime.sendMessage({ type: 'RATE_FILM', rating: val, filmId: data.imdb_id });
+    };
+  });
+
+  // Review Interaction (Auto-save on blur)
+  const reviewField = card.querySelector('.lm-review-field');
+  if (reviewField) {
+    reviewField.onblur = () => {
+      if (reviewField.value.trim()) {
+        chrome.runtime.sendMessage({ type: 'SAVE_REVIEW', review: reviewField.value, filmId: data.imdb_id });
+      }
+    };
+  }
+
   return card;
 }
+
 
 function createBadge(data) {
   if (!data.rating || data.rating === 'N/A' || data.rating === '?') return null;

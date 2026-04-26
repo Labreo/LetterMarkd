@@ -157,13 +157,59 @@
   margin-top: 12px;
 }
 
-/* --- Pro Features --- */
+/* --- Google Search Injection --- */
 
-.lm-pro-section {
-  border-top: 1px solid rgba(255,255,255,0.05);
-  margin-top: 12px;
-  padding-top: 12px;
+/* Knowledge Panel Row */
+.lm-google-kp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #ebebeb;
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 14px;
+  color: #4d5156;
 }
+
+.lm-google-kp-logo {
+  width: 16px;
+  height: 16px;
+  background: #00e054;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.lm-google-kp-stars {
+  color: #00e054;
+  font-weight: 700;
+}
+
+.lm-google-kp-count {
+  color: #70757a;
+  font-size: 13px;
+}
+
+/* Organic Result Pill */
+.lm-google-organic-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #e6fcf5; /* Light green background */
+  color: #099268; /* Darker green text */
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 10px;
+  vertical-align: middle;
+  border: 1px solid #c3fae8;
+}
+
+.lm-google-organic-pill:hover {
+  background: #c3fae8;
+  text-decoration: none;
+}
+
 
 /* Friend Avatars */
 .lm-friends {
