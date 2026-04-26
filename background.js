@@ -124,7 +124,11 @@ function parseRatingFromJsonLd(html) {
   try {
     const ldJsonMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
     if (!ldJsonMatch) return { rating: null, count: null };
-    const data = JSON.parse(ldJsonMatch[1]);
+    
+    let jsonText = ldJsonMatch[1].trim();
+    // Strip CDATA if present
+    jsonText = jsonText.replace(/^\/\*\s*<!\[CDATA\[\s*\*\//, '').replace(/\/\*\s*\]\]>\s*\*\/$/, '').trim();
+    const data = JSON.parse(jsonText);
     
     const extract = (obj) => {
       if (!obj.aggregateRating) return { rating: null, count: null, image: null };
