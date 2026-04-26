@@ -4,14 +4,18 @@ let currentPanel = null;
 let currentPrompt = null;
 let debounceTimer = null;
 
-let maxWordCount = 7;
+let allowlist = [];
+let blocklist = [];
+let isEnabledOnThisSite = false;
+let isPromptedOnThisSite = false;
+let maxWordCount = 5; // Reduced default for stricter triggering
 
 // Load settings
 function loadSettings() {
   chrome.storage.local.get(['allowlist', 'blocklist', 'masterEnabled', 'maxWordCount'], (result) => {
     allowlist = result.allowlist || [];
     blocklist = result.blocklist || [];
-    maxWordCount = result.maxWordCount || 7;
+    maxWordCount = result.maxWordCount || 5;
     const master = result.masterEnabled !== false;
     const host = window.location.hostname.replace('www.', '');
     
@@ -33,6 +37,7 @@ loadSettings();
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'SETTINGS_UPDATED') loadSettings();
   if (msg.type === 'EXTRA_STATS_READY' && currentPanel) {
+    // Only re-render if we are looking at the same movie
     renderFullPanel(msg.data, msg.data.title);
   }
 });
@@ -66,14 +71,14 @@ function handleSelection() {
     return;
   }
 
-  const range = selection.getRangeAt(0);
-  const rect = range.getBoundingClientRect();
-
-  // Check word count limit
+  // Stricter word count check
   const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
   if (wordCount > maxWordCount) {
     return;
   }
+
+  const range = selection.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
 
   if (isEnabledOnThisSite) {
     showBubble(rect, text);
@@ -200,6 +205,11 @@ function renderFullPanel(data, query) {
     </svg>
   `;
 
+  // Determine if we should show extra stats.
+  // We ONLY show the IMDb/Mojo rows if they actually have data and are NOT loading.
+  const hasExtraStats = data.extraStats && !data.extraStats.loading && 
+                        (data.extraStats.imdbRating || data.extraStats.boxOffice || data.extraStats.budget);
+
   currentPanel.innerHTML = `
     <button class="lm-close">&times;</button>
     <div class="lm-panel-header">
@@ -230,14 +240,16 @@ function renderFullPanel(data, query) {
           <div class="lm-info-item"><strong>Cast</strong> ${data.cast || 'N/A'}</div>
           <div class="lm-info-item"><strong>Genres</strong> ${(data.genres || []).join(', ')}</div>
           
+          ${hasExtraStats ? `
           <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-glass);">
+            ${data.extraStats.imdbRating ? `
             <div class="lm-info-item" style="margin-bottom:8px;">
               <strong>IMDb Rating</strong> 
-              <span style="color:var(--accent); font-weight:700;">★ ${data.extraStats?.imdbRating || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span>
-            </div>
-            <div class="lm-info-item"><strong>Box Office</strong> <span style="color:#fff;">${data.extraStats?.boxOffice || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span></div>
-            <div class="lm-info-item"><strong>Budget</strong> <span style="color:#fff;">${data.extraStats?.budget || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span></div>
-          </div>
+              <span style="color:var(--accent); font-weight:700;">★ ${data.extraStats.imdbRating}</span>
+            </div>` : ''}
+            ${data.extraStats.boxOffice ? `<div class="lm-info-item"><strong>Box Office</strong> <span style="color:#fff;">${data.extraStats.boxOffice}</span></div>` : ''}
+            ${data.extraStats.budget ? `<div class="lm-info-item"><strong>Budget</strong> <span style="color:#fff;">${data.extraStats.budget}</span></div>` : ''}
+          </div>` : ''}
         </div>
         
         ${data.watchProviders?.length ? `
@@ -268,8 +280,12 @@ function renderFullPanel(data, query) {
     </div>
     <div class="lm-panel-actions">
       <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a>
-      <div style="margin-top:14px; text-align:center;">
-        <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size:10px; color:var(--text-muted); text-decoration:none; font-weight:500;" onmouseover="this.style.color='var(--text-dim)'" onmouseout="this.style.color='var(--text-muted)'">Not the right movie? Search Letterboxd</a>
+      <div style="margin-top:14px; text-align:center; display: flex; justify-content: center; gap: 15px; align-items: center;">
+        <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size:10px; color:var(--text-muted); text-decoration:none; font-weight:500;" onmouseover="this.style.color='var(--text-dim)'" onmouseout="this.style.color='var(--text-muted)'">Not the right movie?</a>
+        <span style="color:rgba(255,255,255,0.1); font-size:10px;">|</span>
+        <a href="https://buymeacoffee.com/kakeroth" target="_blank" style="font-size:10px; color:#FFBD00; text-decoration:none; font-weight:600; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter='none'">
+          <span>☕</span> Buy me a coffee
+        </a>
       </div>
     </div>
   `;
