@@ -14,7 +14,7 @@
     }
 
     body {
-      width: 320px;
+      width: 300px;
       margin: 0;
       font-family: 'Inter', -apple-system, system-ui, sans-serif;
       background-color: var(--bg);
@@ -39,122 +39,176 @@
       letter-spacing: -0.5px;
     }
 
-    .logo span {
-      color: var(--accent);
+    .logo span { color: var(--accent); }
+
+    .pro-badge {
+      background: linear-gradient(135deg, #ff9000, #ff4e00);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
     }
 
-    .content {
-      padding: 16px;
-    }
+    .content { padding: 16px; }
 
+    /* Connection Status */
     .status-card {
       background: var(--card);
       padding: 12px;
       border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       border: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .status-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      background: #444;
-      border-radius: 50%;
-    }
-
-    .status-dot.connected {
-      background: var(--accent);
-      box-shadow: 0 0 8px var(--accent);
     }
 
     .btn-connect {
       background: var(--accent);
       color: #14181c;
       border: none;
-      padding: 8px 16px;
+      padding: 8px;
       border-radius: 6px;
       font-weight: 600;
-      cursor: pointer;
       width: 100%;
-      transition: opacity 0.2s;
-    }
-
-    .btn-connect:hover {
-      opacity: 0.9;
-    }
-
-    .menu-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
       cursor: pointer;
-      transition: color 0.2s;
     }
 
-    .menu-item:hover {
-      color: var(--accent);
+    /* Toggles */
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .toggle-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .toggle-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    /* Slider */
+    .slider-container {
+      margin-bottom: 24px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
     }
 
     .footer {
       padding: 12px 16px;
       background: rgba(0,0,0,0.2);
       font-size: 11px;
-      color: var(--text-dim);
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
+
+    .footer a {
+      color: var(--text-dim);
+      text-decoration: none;
+    }
+
+    /* Simple Switch Style */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 20px;
+    }
+
+    .switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider-round {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334;
+      transition: .2s;
+      border-radius: 20px;
+    }
+
+    .slider-round:before {
+      position: absolute;
+      content: "";
+      height: 14px; width: 14px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-round { background-color: var(--accent); }
+    input:checked + .slider-round:before { transform: translateX(14px); }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="logo">Letter<span>Markd</span></div>
-    <div id="proBadge" class="pro-badge" style="display:none">PRO</div>
+    <div class="pro-badge" id="upgradeBtn">UPGRADE</div>
   </div>
 
   <div class="content">
     <div class="status-card">
-      <div class="status-info">
-        <div id="statusDot" class="status-dot"></div>
-        <div>
-          <div id="statusText" style="font-size: 14px; font-weight: 600;">Not Connected</div>
-          <div id="userText" style="font-size: 12px; color: var(--text-dim);">Login to sync ratings</div>
-        </div>
+      <div id="authContainer">
+        <button id="connectBtn" class="btn-connect">Connect Letterboxd</button>
+      </div>
+      <div id="userContainer" style="display:none; font-size: 14px;">
+        Connected as <span id="username" style="font-weight:700; color:var(--accent);">@user</span>
       </div>
     </div>
 
-    <button id="connectBtn" class="btn-connect">Connect Letterboxd</button>
+    <div class="section-title">Enable on Sites</div>
+    <div class="toggle-group">
+      <div class="toggle-item">
+        <span>Netflix</span>
+        <label class="switch"><input type="checkbox" id="toggle-netflix" checked><span class="slider-round"></span></label>
+      </div>
+      <div class="toggle-item">
+        <span>Prime Video</span>
+        <label class="switch"><input type="checkbox" id="toggle-prime" checked><span class="slider-round"></span></label>
+      </div>
+      <div class="toggle-item">
+        <span>Disney+</span>
+        <label class="switch"><input type="checkbox" id="toggle-disney" checked><span class="slider-round"></span></label>
+      </div>
+      <div class="toggle-item">
+        <span>Google Search</span>
+        <label class="switch"><input type="checkbox" id="toggle-google" checked><span class="slider-round"></span></label>
+      </div>
+    </div>
 
-    <div style="margin-top: 20px;">
-      <div class="menu-item">
-        <span>Enable on Netflix</span>
-        <input type="checkbox" checked>
+    <div class="section-title">Fade Threshold</div>
+    <div class="slider-container">
+      <div class="slider-header">
+        <span>Minimum Rating</span>
+        <span id="threshold-val">2.5</span>
       </div>
-      <div class="menu-item">
-        <span>Enable on Prime Video</span>
-        <input type="checkbox" checked>
-      </div>
-      <div class="menu-item" id="openSettings" style="margin-top: 12px; color: var(--text-dim);">
-        <span>Advanced Settings</span>
-        <span>→</span>
-      </div>
+      <input type="range" id="threshold-slider" min="1" max="5" step="0.1" value="2.5">
     </div>
   </div>
 
   <div class="footer">
-    <span>v0.1.0</span>
-    <span id="viewProfile" style="cursor:pointer">View Profile</span>
+    <a href="#" id="openOptions">Advanced Settings</a>
+    <span style="color:var(--text-dim)">v0.1.0</span>
   </div>
 
   <script src="popup.js"></script>
