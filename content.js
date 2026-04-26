@@ -73,18 +73,25 @@ function isStreamingSite() {
 
 if (isStreamingSite()) {
   document.addEventListener('mouseover', (e) => {
-    // Only trigger if we aren't already showing a panel
-    if (currentPanel) return;
+    if (currentPanel || currentPrompt) return;
 
     const target = e.target.closest('[aria-label]');
     if (target) {
       const label = target.getAttribute('aria-label');
-      // Basic heuristic to filter out non-movie labels
       if (label && label.length > 1 && label.length < 80 && !label.includes('Menu') && !label.includes('Search')) {
-        clearTimeout(hoverTimer);
-        hoverTimer = setTimeout(() => {
-          showBubble(target.getBoundingClientRect(), label, true);
-        }, 400); // 400ms hover debounce
+        const rect = target.getBoundingClientRect();
+        
+        if (isEnabledOnThisSite) {
+          clearTimeout(hoverTimer);
+          hoverTimer = setTimeout(() => {
+            showBubble(rect, label, true);
+          }, 400);
+        } else if (!isPromptedOnThisSite) {
+          clearTimeout(hoverTimer);
+          hoverTimer = setTimeout(() => {
+            showPermissionPrompt(rect);
+          }, 400);
+        }
       }
     }
   });
@@ -285,14 +292,16 @@ function renderFullPanel(data, query) {
     </div>
     <div class="lm-panel-tabs">
       <div class="lm-tab ${activeTab === 'info' ? 'lm-active' : ''}" data-tab="info">Info</div>
+      <div class="lm-tab ${activeTab === 'details' ? 'lm-active' : ''}" data-tab="details">Details</div>
       <div class="lm-tab ${activeTab === 'reviews' ? 'lm-active' : ''}" data-tab="reviews">Reviews</div>
     </div>
     <div class="lm-panel-body">
       <div id="lm-tab-info" class="lm-tab-content" style="display: ${activeTab === 'info' ? 'block' : 'none'};">
         <div class="lm-info-list">
-          <div class="lm-info-item"><strong>Director</strong> ${data.director || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Cast</strong> ${data.cast || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Genres</strong> ${(data.genres || []).join(', ')}</div>
+          <div class="lm-info-item" style="margin-bottom: 12px; line-height: 1.5; color: #fff;">
+            ${data.tagline ? `<div style="font-style: italic; color: var(--accent); margin-bottom: 8px;">"${data.tagline}"</div>` : ''}
+            ${data.description || 'No description available.'}
+          </div>
           
           ${hasExtraStats ? `
           <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-glass);">
@@ -305,16 +314,17 @@ function renderFullPanel(data, query) {
             ${data.extraStats.budget ? `<div class="lm-info-item"><strong>Budget</strong> <span style="color:#fff;">${data.extraStats.budget}</span></div>` : ''}
           </div>` : ''}
         </div>
-        
-        ${data.watchProviders?.length ? `
-          <div class="lm-where-watch" style="margin-top: 16px; border-top: 1px solid var(--border-glass); padding-top: 15px;">
-            <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Where to Watch</div>
-            <div class="lm-watch-list">
-              ${data.watchProviders.map(p => `<span class="lm-watch-item">${p}</span>`).join('')}
-            </div>
-          </div>
-        ` : ''}
       </div>
+
+      <div id="lm-tab-details" class="lm-tab-content" style="display: ${activeTab === 'details' ? 'block' : 'none'};">
+        <div class="lm-info-list">
+          <div class="lm-info-item"><strong>Director</strong> ${data.director || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Cast</strong> ${data.cast || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Genres</strong> ${(data.genres || []).join(', ') || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Release</strong> ${data.year || 'N/A'}</div>
+        </div>
+      </div>
+
       <div id="lm-tab-reviews" class="lm-tab-content" style="display: ${activeTab === 'reviews' ? 'block' : 'none'};">
         ${(data.reviews || []).map((r, i) => `
           <div class="lm-review-card">
@@ -351,6 +361,7 @@ function renderFullPanel(data, query) {
     t.classList.add('lm-active');
     const target = t.getAttribute('data-tab');
     currentPanel.querySelector('#lm-tab-info').style.display = target === 'info' ? 'block' : 'none';
+    currentPanel.querySelector('#lm-tab-details').style.display = target === 'details' ? 'block' : 'none';
     currentPanel.querySelector('#lm-tab-reviews').style.display = target === 'reviews' ? 'block' : 'none';
   });
 
