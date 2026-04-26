@@ -20,8 +20,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 
 async function handleFetchRating(title, year) {
-  // Update cache prefix to force invalidation of old broken Cloudflare cache
-  const cacheKey = `film_v2_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
+  // Update cache prefix to force invalidation of old data structures
+  const cacheKey = `film_v4_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
   
   const cached = await chrome.storage.local.get(cacheKey);
   if (cached[cacheKey] && (Date.now() - cached[cacheKey].timestamp < CACHE_TTL)) {
@@ -41,6 +41,7 @@ async function handleFetchRating(title, year) {
 
     const parsedData = parseRatingFromJsonLd(html);
     const reviews = parseReviews(html);
+    const watchProviders = parseWatchProviders(html);
     
     // Fallback to Meta Tags if JSON-LD fails for basic rating
     if (!parsedData.rating) {
@@ -51,6 +52,7 @@ async function handleFetchRating(title, year) {
     const result = {
       ...parsedData,
       reviews,
+      watchProviders,
       url: lbResult.url,
       title: lbResult.title,
       year: lbResult.year
@@ -147,7 +149,8 @@ function parseRatingFromJsonLd(html) {
 
       return {
         rating: (ar.ratingValue && !isNaN(parseFloat(ar.ratingValue))) ? parseFloat(ar.ratingValue).toFixed(2) : null,
-        count: ar.ratingCount ? ar.ratingCount.toLocaleString() : null,
+        ratingCount: ar.ratingCount ? ar.ratingCount.toLocaleString() : null,
+        reviewCount: ar.reviewCount ? ar.reviewCount.toLocaleString() : null,
         image: typeof imageObj === 'string' ? imageObj : (imageObj?.url || null),
         director,
         cast,
@@ -166,7 +169,6 @@ function parseRatingFromJsonLd(html) {
 function parseReviews(html) {
   const reviews = [];
   try {
-    // Regex to find review blocks
     const reviewRegex = /<div class="listitem js-listitem">([\s\S]*?)<\/div>\s*<\/article>\s*<\/div>/g;
     let match;
     while ((match = reviewRegex.exec(html)) !== null && reviews.length < 3) {
@@ -174,17 +176,41 @@ function parseReviews(html) {
       const authorMatch = block.match(/<strong class="displayname">(.*?)<\/strong>/);
       const ratingMatch = block.match(/aria-label="(.*?)"/);
       const textMatch = block.match(/<div class="body-text[^>]*?>\s*<p>(.*?)<\/p>/s);
+      const isSpoiler = block.includes('review-spoiler') || block.includes('contains spoilers');
       
       if (textMatch) {
         reviews.push({
           author: authorMatch ? authorMatch[1] : 'Letterboxd Member',
           rating: ratingMatch ? ratingMatch[1] : null,
-          text: textMatch[1].replace(/<[^>]*>?/gm, '').trim()
+          text: textMatch[1].replace(/<[^>]*>?/gm, '').trim(),
+          isSpoiler: !!isSpoiler
         });
       }
     }
   } catch (e) {}
   return reviews;
+}
+
+function parseWatchProviders(html) {
+  const providers = [];
+  try {
+    const watchSectionMatch = html.match(/<section class="watch-panel[^>]*">([\s\S]*?)<\/section>/);
+    if (watchSectionMatch) {
+      const links = watchSectionMatch[1].match(/<a[^>]*title="(.*?)"[^>]*>/g);
+      if (links) {
+        links.forEach(link => {
+          const titleMatch = link.match(/title="(.*?)"/);
+          if (titleMatch && providers.length < 5) {
+            const providerName = titleMatch[1].replace(/^(Stream|Rent|Buy) from /, '').replace(/ on .*/, '').trim();
+            if (!providers.includes(providerName)) {
+              providers.push(providerName);
+            }
+          }
+        });
+      }
+    }
+  } catch (e) {}
+  return providers;
 }
 
 function parseRatingFromMeta(html) {

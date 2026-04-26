@@ -184,6 +184,10 @@ async function showPanel(rect, query) {
             <span style="letter-spacing: 2px;">${starVisual || 'No rating'}</span>
             ${data.rating ? `<span style="color:#fff; margin-left:6px;">${data.rating}</span>` : ''}
           </div>
+          <div style="font-size: 11px; color: #70757a; margin-top: 4px;">
+            ${data.ratingCount ? `${data.ratingCount} ratings` : ''} 
+            ${data.reviewCount ? ` &bull; ${data.reviewCount} reviews` : ''}
+          </div>
         </div>
       </div>
 
@@ -193,7 +197,7 @@ async function showPanel(rect, query) {
       </div>
 
       <div class="lm-panel-body">
-        <div id="lm-tab-info" class="lm-tab-content">
+        <div id="lm-tab-info" class="lm-tab-content lm-active">
           ${data.director ? `
             <div class="lm-meta-item">
               <span class="lm-meta-label">Directed by</span>
@@ -209,18 +213,34 @@ async function showPanel(rect, query) {
           ` : ''}
 
           <div class="lm-meta-item">
-            ${data.genres?.map(g => `<span class="lm-genre-tag">${g}</span>`).join('')}
+            ${(data.genres || []).map(g => `<span class="lm-genre-tag">${g}</span>`).join('')}
           </div>
+
+          ${data.watchProviders?.length ? `
+            <div class="lm-meta-item" style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+              <span class="lm-meta-label">Where to Watch</span>
+              <div class="lm-watch-list">
+                ${data.watchProviders.map(p => `<span class="lm-watch-item">${p}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
         </div>
 
-        <div id="lm-tab-reviews" class="lm-tab-content" style="display: none;">
-          ${data.reviews?.length ? data.reviews.map(r => `
+        <div id="lm-tab-reviews" class="lm-tab-content">
+          ${data.reviews?.length ? data.reviews.map((r, idx) => `
             <div class="lm-review-card">
               <div class="lm-review-author">
                 <span>${r.author}</span>
                 <span style="color:#E9C46A;">${r.rating || ''}</span>
               </div>
-              <div class="lm-review-text">${r.text}</div>
+              ${r.isSpoiler ? `
+                <div class="lm-spoiler-warning" id="lm-spoiler-${idx}">
+                  This review may contain spoilers. <span class="lm-reveal-link" data-reveal-id="lm-text-${idx}" data-warning-id="lm-spoiler-${idx}">I can handle the truth.</span>
+                </div>
+                <div class="lm-review-text" id="lm-text-${idx}" style="display: none;">${r.text}</div>
+              ` : `
+                <div class="lm-review-text">${r.text}</div>
+              `}
             </div>
           `).join('') : '<div style="color:#70757a; font-size:12px; text-align:center; padding: 20px;">No reviews found.</div>'}
         </div>
@@ -234,14 +254,30 @@ async function showPanel(rect, query) {
     
     // Tab Switching Logic
     const tabs = currentPanel.querySelectorAll('.lm-tab');
+    const contents = currentPanel.querySelectorAll('.lm-tab-content');
+
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('lm-active'));
-        tab.classList.add('lm-active');
+        const targetId = `lm-tab-${tab.getAttribute('data-tab')}`;
         
-        const target = tab.getAttribute('data-tab');
-        currentPanel.querySelector('#lm-tab-info').style.display = target === 'info' ? 'block' : 'none';
-        currentPanel.querySelector('#lm-tab-reviews').style.display = target === 'reviews' ? 'block' : 'none';
+        // Toggle tabs
+        tabs.forEach(t => t.classList.toggle('lm-active', t === tab));
+        
+        // Toggle content
+        contents.forEach(c => {
+          c.classList.toggle('lm-active', c.id === targetId);
+        });
+      });
+    });
+
+    // Spoiler Reveal Logic
+    currentPanel.querySelectorAll('.lm-reveal-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const textId = e.target.getAttribute('data-reveal-id');
+        const warningId = e.target.getAttribute('data-warning-id');
+        
+        currentPanel.querySelector(`#${textId}`).style.display = 'block';
+        currentPanel.querySelector(`#${warningId}`).style.display = 'none';
       });
     });
 

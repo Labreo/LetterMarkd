@@ -102,6 +102,15 @@
   background: rgba(233, 196, 106, 0.05);
 }
 
+.lm-tab-content {
+  display: none;
+  animation: lmFadeIn 0.2s ease-out;
+}
+
+.lm-tab-content.lm-active {
+  display: block;
+}
+
 .lm-panel-body {
   overflow-y: auto;
   flex: 1;
@@ -165,6 +174,39 @@
   line-height: 1.5;
   color: #ccc;
   font-style: italic;
+}
+
+.lm-spoiler-warning {
+  background: rgba(255,255,255,0.03);
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #9ab;
+  text-align: center;
+  border: 1px dashed rgba(255,255,255,0.1);
+}
+
+.lm-reveal-link {
+  color: #fff;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.lm-watch-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.lm-watch-item {
+  background: #E9C46A;
+  color: #14181c;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: bold;
 }
 
 .lm-panel-actions {
