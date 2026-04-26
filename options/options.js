@@ -22,7 +22,7 @@ function restoreOptions() {
   chrome.storage.local.get({
     blocklist: [],
     allowlist: [],
-    maxWordCount: 7
+    maxWordCount: 12
   }, (items) => {
     document.getElementById('blocklist').value = items.blocklist.join('\n');
     document.getElementById('allowlist').value = items.allowlist.join('\n');

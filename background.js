@@ -26,7 +26,7 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'SEARCH_FILM') {
-    handleFetchRating(request.query, null, sender.tab?.id)
+    handleFetchRating(request.query, request.year, sender.tab?.id)
       .then(res => sendResponse(res))
       .catch(err => sendResponse({ error: err.message }));
     return true;

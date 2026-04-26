@@ -9,14 +9,14 @@ let allowlist = [];
 let blocklist = [];
 let isEnabledOnThisSite = false;
 let isPromptedOnThisSite = false;
-let maxWordCount = 5; // Reduced default for stricter triggering
+let maxWordCount = 12;
 
 // Load settings
 function loadSettings() {
   chrome.storage.local.get(['allowlist', 'blocklist', 'masterEnabled', 'maxWordCount'], (result) => {
     allowlist = result.allowlist || [];
     blocklist = result.blocklist || [];
-    maxWordCount = result.maxWordCount || 5;
+    maxWordCount = result.maxWordCount || 12;
     const master = result.masterEnabled !== false;
     const host = window.location.hostname.replace('www.', '');
     
@@ -106,7 +106,8 @@ function handleSelection() {
   const selection = window.getSelection();
   const text = selection.toString().trim();
   
-  if (text.length < 2 || text.length > 60 || !/^[a-zA-Z0-9\s:&'-]+$/.test(text)) {
+  // Allow letters, numbers, spaces, and common title punctuation: : & ' - ( ) , .
+  if (text.length < 2 || text.length > 80 || !/^[a-zA-Z0-9\s:&'().,-]+$/.test(text)) {
     return;
   }
 
@@ -211,7 +212,16 @@ function showPanel(rect, query) {
   currentPanel.innerHTML = `<button class="lm-close">&times;</button><div class="lm-panel-header" style="padding:40px;justify-content:center;"><div class="lm-spinner"></div></div>`;
   document.body.appendChild(currentPanel);
 
-  chrome.runtime.sendMessage({ type: 'SEARCH_FILM', query: query }, (data) => {
+  // Smart parsing: Extract title and year if present like "Movie Title (2024)"
+  let searchTitle = query;
+  let searchYear = null;
+  const yearMatch = query.match(/(.+?)\s*\((19\d{2}|20\d{2})\)/);
+  if (yearMatch) {
+    searchTitle = yearMatch[1].trim();
+    searchYear = yearMatch[2];
+  }
+
+  chrome.runtime.sendMessage({ type: 'SEARCH_FILM', query: searchTitle, year: searchYear }, (data) => {
     if (chrome.runtime.lastError || !data || !data.rating) {
       currentPanel.innerHTML = `
         <button class="lm-close">&times;</button>
