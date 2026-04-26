@@ -131,49 +131,35 @@ async function showPanel(rect, query) {
   currentPanel = document.createElement('div');
   currentPanel.id = 'lm-panel';
   
-  const panelWidth = 280;
-  const panelHeight = 250; // Estimated max height
+  const panelWidth = 320;
+  const panelHeight = 400; 
   const gap = 8;
   
-  // Calculate horizontal center
   let left = rect.left + window.scrollX + (rect.width / 2);
-  
-  // Guard horizontal edges
   const padding = 10;
   const minLeft = window.scrollX + (panelWidth / 2) + padding;
   const maxLeft = window.scrollX + window.innerWidth - (panelWidth / 2) - padding;
   left = Math.max(minLeft, Math.min(maxLeft, left));
 
-  // Determine vertical position (prefer below)
   let top = rect.bottom + window.scrollY + gap;
-  
-  // Flip to top if no space below or if selection is very low
   if (top + panelHeight > window.scrollY + window.innerHeight) {
     top = rect.top + window.scrollY - panelHeight - gap;
-    // Ensure we don't go off the top either
     top = Math.max(window.scrollY + padding, top);
   }
   
   currentPanel.style.top = `${top}px`;
   currentPanel.style.left = `${left}px`;
-
-  // Display panel immediately in a loading state
+  
   currentPanel.innerHTML = `
     <button class="lm-close">&times;</button>
-    <div class="lm-panel-header" style="justify-content:center; align-items:center; padding: 24px;">
-      <div class="lm-spinner" style="margin-right: 12px;"></div>
-      <div style="color:#9ab; font-size:13px;">Searching Letterboxd...</div>
+    <div class="lm-panel-header" style="padding: 24px; align-items: center; justify-content: center;">
+      <div class="lm-spinner"></div>
     </div>
   `;
-
   document.body.appendChild(currentPanel);
 
-  // Bind close button
-  currentPanel.querySelector('.lm-close').addEventListener('click', () => clearUI());
-
-  // Send SEARCH_FILM message as specified
   chrome.runtime.sendMessage({ type: 'SEARCH_FILM', query: query }, (data) => {
-    if (chrome.runtime.lastError || !data || !data.rating) {
+    if (chrome.runtime.lastError || !data || (!data.rating && !data.title)) {
       currentPanel.innerHTML = `
         <button class="lm-close">&times;</button>
         <div class="lm-panel-header" style="padding: 24px; flex-direction: column; align-items: center; text-align: center;">
@@ -189,26 +175,76 @@ async function showPanel(rect, query) {
 
     currentPanel.innerHTML = `
       <button class="lm-close">&times;</button>
+      
       <div class="lm-panel-header">
         ${data.image ? `<img src="${data.image}" class="lm-poster" alt="Poster">` : ''}
         <div class="lm-panel-info">
           <a href="${data.url}" target="_blank" class="lm-panel-title">${data.title} ${data.year ? `<span style="color:#9ab; font-weight:normal;">${data.year}</span>` : ''}</a>
           <div class="lm-panel-rating">
-            <span style="letter-spacing: 2px;">${starVisual}</span>
-            <span style="color:#fff; margin-left:6px;">${data.rating} / 5</span>
-            ${data.count ? `<span style="font-size:11px; color:#70757a; font-weight:normal; margin-left:6px;">${data.count} ratings</span>` : ''}
+            <span style="letter-spacing: 2px;">${starVisual || 'No rating'}</span>
+            ${data.rating ? `<span style="color:#fff; margin-left:6px;">${data.rating}</span>` : ''}
           </div>
         </div>
       </div>
+
+      <div class="lm-panel-tabs">
+        <div class="lm-tab lm-active" data-tab="info">Info</div>
+        <div class="lm-tab" data-tab="reviews">Reviews ${data.reviews?.length ? `(${data.reviews.length})` : ''}</div>
+      </div>
+
+      <div class="lm-panel-body">
+        <div id="lm-tab-info" class="lm-tab-content">
+          ${data.director ? `
+            <div class="lm-meta-item">
+              <span class="lm-meta-label">Directed by</span>
+              ${data.director}
+            </div>
+          ` : ''}
+          
+          ${data.cast ? `
+            <div class="lm-meta-item">
+              <span class="lm-meta-label">Starring</span>
+              ${data.cast}
+            </div>
+          ` : ''}
+
+          <div class="lm-meta-item">
+            ${data.genres?.map(g => `<span class="lm-genre-tag">${g}</span>`).join('')}
+          </div>
+        </div>
+
+        <div id="lm-tab-reviews" class="lm-tab-content" style="display: none;">
+          ${data.reviews?.length ? data.reviews.map(r => `
+            <div class="lm-review-card">
+              <div class="lm-review-author">
+                <span>${r.author}</span>
+                <span style="color:#E9C46A;">${r.rating || ''}</span>
+              </div>
+              <div class="lm-review-text">${r.text}</div>
+            </div>
+          `).join('') : '<div style="color:#70757a; font-size:12px; text-align:center; padding: 20px;">No reviews found.</div>'}
+        </div>
+      </div>
+
       <div class="lm-panel-actions">
         <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a>
-        <a href="${data.url}" target="_blank" class="lm-btn">+ Watchlist</a>
-        <a href="${data.url}" target="_blank" class="lm-btn">Mark Watched</a>
-        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 4px 0;"></div>
-        <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size: 11px; color: #9ab; text-align: center; text-decoration: none;">Not the right film? Search Letterboxd</a>
+        <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size: 11px; color: #9ab; text-align: center; text-decoration: none; margin-top: 4px;">Not the right film? Search Letterboxd</a>
       </div>
     `;
     
+    // Tab Switching Logic
+    const tabs = currentPanel.querySelectorAll('.lm-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('lm-active'));
+        tab.classList.add('lm-active');
+        
+        const target = tab.getAttribute('data-tab');
+        currentPanel.querySelector('#lm-tab-info').style.display = target === 'info' ? 'block' : 'none';
+        currentPanel.querySelector('#lm-tab-reviews').style.display = target === 'reviews' ? 'block' : 'none';
+      });
+    });
+
     currentPanel.querySelector('.lm-close').addEventListener('click', () => clearUI());
   });
 }

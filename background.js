@@ -39,24 +39,21 @@ async function handleFetchRating(title, year) {
     const response = await fetch(lbResult.url);
     const html = await response.text();
 
-    let parsedData = parseRatingFromJsonLd(html);
+    const parsedData = parseRatingFromJsonLd(html);
+    const reviews = parseReviews(html);
     
-    // Fallback to Meta Tags if JSON-LD fails
+    // Fallback to Meta Tags if JSON-LD fails for basic rating
     if (!parsedData.rating) {
-      console.log('[LetterMarkd] JSON-LD failed, trying Meta Fallback...');
-      parsedData = parseRatingFromMeta(html);
+      const metaData = parseRatingFromMeta(html);
+      parsedData.rating = metaData.rating;
     }
 
-    console.log(`[LetterMarkd] Final rating: ${parsedData.rating}`);
-
     const result = {
-      rating: parsedData.rating,
-      count: parsedData.count,
-      image: parsedData.image,
-      url: response.url,
-      title: lbResult.title || title,
-      year: lbResult.year || year,
-      genres: []
+      ...parsedData,
+      reviews,
+      url: lbResult.url,
+      title: lbResult.title,
+      year: lbResult.year
     };
 
     if (parsedData.rating !== null && parsedData.rating !== undefined) {
@@ -137,28 +134,57 @@ function parseRatingFromJsonLd(html) {
     if (!ldJsonMatch) return { rating: null, count: null };
     
     let jsonText = ldJsonMatch[1].trim();
-    // Strip CDATA if present
     jsonText = jsonText.replace(/^\/\*\s*<!\[CDATA\[\s*\*\//, '').replace(/\/\*\s*\]\]>\s*\*\/$/, '').trim();
     const data = JSON.parse(jsonText);
     
     const extract = (obj) => {
-      if (!obj.aggregateRating) return { rating: null, count: null, image: null };
-      const val = obj.aggregateRating.ratingValue;
-      const count = obj.aggregateRating.ratingCount;
+      const ar = obj.aggregateRating || {};
       const imageObj = obj.image ? (Array.isArray(obj.image) ? obj.image[0] : obj.image) : null;
+      
+      const director = obj.director ? (Array.isArray(obj.director) ? obj.director.map(d => d.name).join(', ') : obj.director.name) : null;
+      const cast = obj.actors ? obj.actors.slice(0, 3).map(a => a.name).join(', ') : null;
+      const genres = Array.isArray(obj.genre) ? obj.genre : (obj.genre ? [obj.genre] : []);
+
       return {
-        rating: (val && !isNaN(parseFloat(val))) ? parseFloat(val).toFixed(2) : null,
-        count: count ? count.toLocaleString() : null,
-        image: typeof imageObj === 'string' ? imageObj : (imageObj?.url || null)
+        rating: (ar.ratingValue && !isNaN(parseFloat(ar.ratingValue))) ? parseFloat(ar.ratingValue).toFixed(2) : null,
+        count: ar.ratingCount ? ar.ratingCount.toLocaleString() : null,
+        image: typeof imageObj === 'string' ? imageObj : (imageObj?.url || null),
+        director,
+        cast,
+        genres
       };
     };
 
     if (Array.isArray(data)) {
       const film = data.find(i => i['@type'] === 'Movie');
-      return film ? extract(film) : { rating: null, count: null, image: null };
+      return film ? extract(film) : { rating: null };
     }
     return extract(data);
-  } catch (e) { return { rating: null, count: null, image: null }; }
+  } catch (e) { return { rating: null }; }
+}
+
+function parseReviews(html) {
+  const reviews = [];
+  try {
+    // Regex to find review blocks
+    const reviewRegex = /<div class="listitem js-listitem">([\s\S]*?)<\/div>\s*<\/article>\s*<\/div>/g;
+    let match;
+    while ((match = reviewRegex.exec(html)) !== null && reviews.length < 3) {
+      const block = match[1];
+      const authorMatch = block.match(/<strong class="displayname">(.*?)<\/strong>/);
+      const ratingMatch = block.match(/aria-label="(.*?)"/);
+      const textMatch = block.match(/<div class="body-text[^>]*?>\s*<p>(.*?)<\/p>/s);
+      
+      if (textMatch) {
+        reviews.push({
+          author: authorMatch ? authorMatch[1] : 'Letterboxd Member',
+          rating: ratingMatch ? ratingMatch[1] : null,
+          text: textMatch[1].replace(/<[^>]*>?/gm, '').trim()
+        });
+      }
+    }
+  } catch (e) {}
+  return reviews;
 }
 
 function parseRatingFromMeta(html) {

@@ -55,7 +55,7 @@
   z-index: 2147483646;
   background: #14181c;
   color: #fff;
-  width: 280px;
+  width: 320px; /* Slightly wider for reviews */
   border-radius: 10px;
   font-family: Georgia, serif;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
@@ -63,6 +63,9 @@
   overflow: hidden;
   animation: lmFadeIn 180ms ease-out forwards;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
 }
 
 .lm-panel-header {
@@ -70,6 +73,108 @@
   border-bottom: 1px solid rgba(255,255,255,0.05);
   display: flex;
   gap: 12px;
+  flex-shrink: 0;
+}
+
+.lm-panel-tabs {
+  display: flex;
+  background: #1b2228;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+
+.lm-tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #9ab;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.lm-tab.lm-active {
+  color: #E9C46A;
+  border-bottom-color: #E9C46A;
+  background: rgba(233, 196, 106, 0.05);
+}
+
+.lm-panel-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 12px;
+}
+
+.lm-panel-body::-webkit-scrollbar {
+  width: 6px;
+}
+.lm-panel-body::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+}
+
+.lm-meta-item {
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: #9ab;
+  line-height: 1.4;
+}
+
+.lm-meta-label {
+  color: #70757a;
+  font-size: 11px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.lm-genre-tag {
+  display: inline-block;
+  background: #2c3440;
+  color: #9ab;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.lm-review-card {
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.lm-review-card:last-child {
+  border-bottom: none;
+}
+
+.lm-review-author {
+  font-weight: bold;
+  font-size: 12px;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.lm-review-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ccc;
+  font-style: italic;
+}
+
+.lm-panel-actions {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 8px;
+  background: #1b2228;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
 }
 
 .lm-poster {
@@ -101,14 +206,6 @@
   gap: 6px;
 }
 
-.lm-panel-actions {
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  gap: 8px;
-  background: #1b2228;
-}
-
 .lm-btn {
   background: #2c3440;
   color: #fff;
@@ -120,7 +217,7 @@
   text-align: center;
   cursor: pointer;
   transition: background 0.2s;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; /* Keep buttons sans-serif for legibility */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-weight: 600;
 }
 
