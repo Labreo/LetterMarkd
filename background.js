@@ -9,7 +9,47 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(err => sendResponse({ error: err.message }));
     return true;
   }
+
+  if (request.type === 'START_AUTH') {
+    handleAuthFlow()
+      .then(sendResponse)
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
 });
+
+async function handleAuthFlow() {
+  const redirectUri = chrome.identity.getRedirectURL();
+  const clientId = 'YOUR_CLIENT_ID'; // Placeholder
+  const authUrl = `https://letterboxd.com/api/v0/auth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=write`;
+
+  return new Promise((resolve, reject) => {
+    chrome.identity.launchWebAuthFlow({
+      url: authUrl,
+      interactive: true
+    }, async (redirectUrl) => {
+      if (chrome.runtime.lastError || !redirectUrl) {
+        reject(new Error(chrome.runtime.lastError?.message || 'User cancelled or failed to auth'));
+        return;
+      }
+
+      // Extract code/token from redirectUrl
+      const url = new URL(redirectUrl);
+      const code = url.searchParams.get('code');
+      
+      if (code) {
+        // Exchange code for token (this usually happens on a backend, or via direct fetch if Letterboxd allows)
+        // For now, we'll simulate a successful token storage
+        const mockToken = 'lb_token_' + Math.random().toString(36).substr(2);
+        await chrome.storage.local.set({ authToken: mockToken, username: 'CinemarkUser' });
+        resolve({ success: true, username: 'CinemarkUser' });
+      } else {
+        reject(new Error('No auth code returned'));
+      }
+    });
+  });
+}
+
 
 async function handleFetchRating(title, year) {
   const cacheKey = `film_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;

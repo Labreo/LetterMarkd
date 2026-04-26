@@ -53,17 +53,44 @@
       border-radius: 12px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 12px;
       margin-bottom: 16px;
       border: 1px solid rgba(255,255,255,0.05);
     }
 
+    .status-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .status-dot {
       width: 8px;
       height: 8px;
-      background: var(--accent);
+      background: #444;
       border-radius: 50%;
+    }
+
+    .status-dot.connected {
+      background: var(--accent);
       box-shadow: 0 0 8px var(--accent);
+    }
+
+    .btn-connect {
+      background: var(--accent);
+      color: #14181c;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.2s;
+    }
+
+    .btn-connect:hover {
+      opacity: 0.9;
     }
 
     .menu-item {
@@ -80,10 +107,6 @@
       color: var(--accent);
     }
 
-    .menu-item:last-child {
-      border-bottom: none;
-    }
-
     .footer {
       padding: 12px 16px;
       background: rgba(0,0,0,0.2);
@@ -92,53 +115,48 @@
       display: flex;
       justify-content: space-between;
     }
-
-    .pro-badge {
-      background: linear-gradient(135deg, #ff9000, #ff4e00);
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: white;
-      font-weight: bold;
-      font-size: 10px;
-    }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="logo">Letter<span>Markd</span></div>
-    <div class="pro-badge">PRO</div>
+    <div id="proBadge" class="pro-badge" style="display:none">PRO</div>
   </div>
 
   <div class="content">
     <div class="status-card">
-      <div class="status-dot"></div>
-      <div>
-        <div style="font-size: 14px; font-weight: 600;">Connected to Letterboxd</div>
-        <div style="font-size: 12px; color: var(--text-dim);">@sanjaywaradkar</div>
+      <div class="status-info">
+        <div id="statusDot" class="status-dot"></div>
+        <div>
+          <div id="statusText" style="font-size: 14px; font-weight: 600;">Not Connected</div>
+          <div id="userText" style="font-size: 12px; color: var(--text-dim);">Login to sync ratings</div>
+        </div>
       </div>
     </div>
 
-    <div class="menu-item">
-      <span>Enable on Netflix</span>
-      <input type="checkbox" checked>
-    </div>
-    <div class="menu-item">
-      <span>Enable on Prime Video</span>
-      <input type="checkbox" checked>
-    </div>
-    <div class="menu-item">
-      <span>Show Watchlist Status</span>
-      <input type="checkbox" checked>
-    </div>
-    <div class="menu-item" style="margin-top: 12px; color: var(--text-dim);">
-      <span>Advanced Settings</span>
-      <span>→</span>
+    <button id="connectBtn" class="btn-connect">Connect Letterboxd</button>
+
+    <div style="margin-top: 20px;">
+      <div class="menu-item">
+        <span>Enable on Netflix</span>
+        <input type="checkbox" checked>
+      </div>
+      <div class="menu-item">
+        <span>Enable on Prime Video</span>
+        <input type="checkbox" checked>
+      </div>
+      <div class="menu-item" id="openSettings" style="margin-top: 12px; color: var(--text-dim);">
+        <span>Advanced Settings</span>
+        <span>→</span>
+      </div>
     </div>
   </div>
 
   <div class="footer">
     <span>v0.1.0</span>
-    <span>View on Letterboxd.com</span>
+    <span id="viewProfile" style="cursor:pointer">View Profile</span>
   </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>
