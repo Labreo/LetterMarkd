@@ -1,7 +1,9 @@
 // LetterMarkd Netflix Content Script
-const LOW_RATING_THRESHOLD = 2.5;
-let fadeOutTimer = null;
+const LOW_RATING_THRESHOLD_DEFAULT = 2.5;
 
+/**
+ * Fetch rating from background service worker
+ */
 async function getRating(title, year) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(
@@ -17,160 +19,94 @@ async function getRating(title, year) {
   });
 }
 
-function createCard(data) {
-  const card = document.createElement('div');
-  card.className = 'lettermarkd-card';
-  
-  // Genres (Top 3)
-  const genresHtml = (data.genres || ['Drama', 'Thriller', 'Action']).slice(0, 3)
-    .map(g => `<span class="lm-genre-tag">${g}</span>`).join('');
-
-  const displayRating = parseFloat(data.rating).toFixed(2);
-
-  // Pro Simulation Data (In reality, this comes from background/storage)
-  const isPro = true; 
-  const personalRating = data.personalRating || 0;
-  const friends = data.friends || [
-    { name: 'Alex', avatar: '' },
-    { name: 'Sam', avatar: '' }
-  ];
-
-  card.innerHTML = `
-    <div class="lm-title">${data.title}</div>
-    <div class="lm-meta">${data.year || ''} • Directed by ...</div>
-    
-    <div class="lm-rating-section">
-      <div class="lm-stars">★ ${displayRating}</div>
-      <div class="lm-count">(47,342 ratings)</div>
-    </div>
-
-    <div class="lm-genres">${genresHtml}</div>
-
-    <div class="lm-actions">
-      <button class="lm-btn lm-btn-primary" data-action="watchlist">+ Watchlist</button>
-      <button class="lm-btn" data-action="watched">✓ Mark Watched</button>
-    </div>
-
-    ${isPro ? `
-      <div class="lm-pro-section">
-        <div class="lm-friends">
-          ${friends.map(f => `<div class="lm-avatar" title="${f.name}"></div>`).join('')}
-          <span class="lm-friends-text">${friends.length} friends watched</span>
-        </div>
-
-        <div class="lm-personal-rating">
-          <div class="lm-you-label">You: ${personalRating ? '★'.repeat(Math.floor(personalRating)) : 'Rate this film'}</div>
-          <div class="lm-star-input">
-            ${[1,2,3,4,5].map(i => `<span data-value="${i}" class="${i <= personalRating ? 'active' : ''}">★</span>`).join('')}
-          </div>
-        </div>
-
-        <textarea class="lm-review-field" placeholder="Write a quick review..."></textarea>
-      </div>
-    ` : ''}
-
-    <a href="${data.url}" target="_blank" class="lm-link">Open on Letterboxd</a>
-  `;
-
-  // Prevent clicks inside card from bubbling to Netflix
-  card.onclick = (e) => e.stopPropagation();
-
-  // Action listeners
-  card.querySelectorAll('.lm-actions button').forEach(btn => {
-    btn.onclick = (e) => {
-      const action = btn.dataset.action;
-      chrome.runtime.sendMessage({ type: 'PERFORM_ACTION', action, filmId: data.imdb_id });
-      btn.textContent = '...';
-      setTimeout(() => btn.textContent = action === 'watchlist' ? 'Added!' : 'Watched!', 500);
-    };
-  });
-
-  // Star Rating Interaction
-  const stars = card.querySelectorAll('.lm-star-input span');
-  stars.forEach(star => {
-    star.onclick = () => {
-      const val = parseInt(star.dataset.value);
-      stars.forEach((s, idx) => s.classList.toggle('active', idx < val));
-      chrome.runtime.sendMessage({ type: 'RATE_FILM', rating: val, filmId: data.imdb_id });
-    };
-  });
-
-  // Review Interaction (Auto-save on blur)
-  const reviewField = card.querySelector('.lm-review-field');
-  if (reviewField) {
-    reviewField.onblur = () => {
-      if (reviewField.value.trim()) {
-        chrome.runtime.sendMessage({ type: 'SAVE_REVIEW', review: reviewField.value, filmId: data.imdb_id });
-      }
-    };
-  }
-
-  return card;
-}
-
-
-function createBadge(data) {
-  if (!data.rating || data.rating === 'N/A' || data.rating === '?') return null;
-
-  const container = document.createElement('div');
-  container.className = 'lettermarkd-badge';
-  
-  const pillText = document.createElement('span');
-  pillText.innerHTML = `★ ${parseFloat(data.rating).toFixed(1)}`;
-  container.appendChild(pillText);
-
-  const card = createCard(data);
-  container.appendChild(card);
-
-  // Position detection logic
-  container.onmouseenter = () => {
-    if (fadeOutTimer) clearTimeout(fadeOutTimer);
-    
-    const rect = container.getBoundingClientRect();
-    if (rect.right + 250 > window.innerWidth) {
-      card.classList.add('flip-left');
-    } else {
-      card.classList.remove('flip-left');
-    }
-  };
-
-  container.onmouseleave = () => {
-    fadeOutTimer = setTimeout(() => {
-      // Logic handled by CSS hover, but timer keeps container "active" if needed
-    }, 300);
-  };
-
-  return container;
-}
-
-async function injectNetflix() {
-  const cards = document.querySelectorAll('.title-card');
+/**
+ * --- GRID INJECTION ---
+ * Targets the standard browsing rows
+ */
+async function injectBrowseGrid() {
+  const cards = document.querySelectorAll('.title-card:not(.lm-processed)');
   
   for (const card of cards) {
-    if (card.querySelector('.lettermarkd-badge')) continue;
-
+    card.classList.add('lm-processed');
+    
     const link = card.querySelector('a[aria-label]');
     if (!link) continue;
 
     const title = link.getAttribute('aria-label');
-    const posterContainer = card.querySelector('.boxshot-container') || card;
+    const posterContainer = card.querySelector('.boxshot-container');
+    if (!posterContainer) continue;
+
     posterContainer.classList.add('lettermarkd-container');
 
     const data = await getRating(title);
     if (data && data.rating && data.rating !== 'N/A') {
-      const badge = createBadge(data);
-      if (badge) {
-        posterContainer.appendChild(badge);
-        if (parseFloat(data.rating) < LOW_RATING_THRESHOLD) {
-          const img = posterContainer.querySelector('img');
-          if (img) img.classList.add('lettermarkd-low-rating-poster');
-        }
+      const badge = document.createElement('div');
+      badge.className = 'lettermarkd-badge';
+      badge.innerHTML = `<span>★ ${parseFloat(data.rating).toFixed(1)}</span>`;
+      
+      posterContainer.appendChild(badge);
+
+      // Low Rating Fade
+      const settings = await chrome.storage.local.get('threshold');
+      const threshold = settings.threshold || LOW_RATING_THRESHOLD_DEFAULT;
+      if (parseFloat(data.rating) < threshold) {
+        const img = posterContainer.querySelector('img');
+        if (img) img.classList.add('lettermarkd-low-rating-poster');
       }
     }
   }
 }
 
-const observer = new MutationObserver(() => injectNetflix());
-observer.observe(document.body, { childList: true, subtree: true });
+/**
+ * --- HOVER CARD INJECTION ---
+ * Targets the large preview modal
+ */
+async function injectHoverCard() {
+  const modal = document.querySelector('.preview-modal-container:not(.lm-processed)');
+  if (!modal) return;
 
-injectNetflix();
+  modal.classList.add('lm-processed');
+
+  // Extract title from the modal
+  const titleEl = modal.querySelector('.previewModal--text, .previewModal-title-text');
+  if (!titleEl) return;
+
+  const title = titleEl.innerText;
+  
+  // Extract year if available
+  const yearEl = modal.querySelector('.year');
+  const year = yearEl ? yearEl.innerText : null;
+
+  const data = await getRating(title, year);
+  if (data && data.rating && data.rating !== 'N/A') {
+    const metaContainer = modal.querySelector('.previewModal--metadataview-container');
+    if (!metaContainer) return;
+
+    const ratingRow = document.createElement('div');
+    ratingRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-top:8px; font-weight:700; color:#00e054;';
+    ratingRow.innerHTML = `
+      <span style="background:#14181c; padding:2px 6px; border-radius:4px; font-size:12px; border:1px solid #00e054;">Letterboxd</span>
+      <span>★ ${parseFloat(data.rating).toFixed(2)}</span>
+      <span style="font-size:12px; color:#aaa; font-weight:400;">(${data.year || 'Film'})</span>
+    `;
+
+    metaContainer.appendChild(ratingRow);
+  }
+}
+
+/**
+ * Main Observer Logic
+ */
+const observer = new MutationObserver(() => {
+  injectBrowseGrid();
+  injectHoverCard();
+});
+
+observer.observe(document.body, { 
+  childList: true, 
+  subtree: true 
+});
+
+// Initial runs
+injectBrowseGrid();
+injectHoverCard();

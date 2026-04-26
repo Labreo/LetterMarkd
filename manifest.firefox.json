@@ -1,0 +1,51 @@
+{
+  "manifest_version": 2,
+  "name": "LetterMarkd",
+  "version": "0.1.0",
+  "description": "Letterboxd ratings and actions overlaid on any movie-related webpage.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "lettermarkd@labreo.com",
+      "strict_min_version": "109.0"
+    }
+  },
+  "permissions": [
+    "storage",
+    "identity",
+    "https://*.netflix.com/*",
+    "https://*.primevideo.com/*",
+    "https://*.disneyplus.com/*",
+    "https://www.google.com/*",
+    "https://letterboxd.com/*",
+    "https://api.themoviedb.org/*"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.netflix.com/*"],
+      "js": ["content/netflix.js"],
+      "css": ["styles/badge.css"]
+    },
+    {
+      "matches": ["https://*.primevideo.com/*", "https://*.amazon.com/*"],
+      "js": ["content/prime.js"],
+      "css": ["styles/badge.css"]
+    },
+    {
+      "matches": ["https://www.google.com/search*"],
+      "js": ["content/google.js"],
+      "css": ["styles/badge.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": "icons/icon-48.png"
+  },
+  "icons": {
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}
