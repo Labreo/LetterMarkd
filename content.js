@@ -163,7 +163,13 @@ async function showPanel(rect, query) {
 
   chrome.runtime.sendMessage({ type: 'SEARCH_FILM', query: query }, (data) => {
     if (chrome.runtime.lastError || !data || !data.rating) {
-      currentPanel.innerHTML = `<button class="lm-close">&times;</button><div class="lm-panel-header" style="padding:20px;text-align:center;">No rating found for "${query}"</div>`;
+      currentPanel.innerHTML = `
+        <button class="lm-close">&times;</button>
+        <div class="lm-panel-header" style="padding:20px; flex-direction:column; align-items:center; text-align:center;">
+          <div style="margin-bottom:15px; color:#9ab;">No direct match found for "${query}"</div>
+          <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" class="lm-btn lm-btn-primary" style="text-decoration:none;">Search on Letterboxd</a>
+        </div>
+      `;
       currentPanel.querySelector('.lm-close').onclick = clearUI;
       return;
     }
