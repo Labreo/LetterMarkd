@@ -9,9 +9,9 @@ const DEFAULT_ALLOWLIST = [
 ];
 
 chrome.runtime.onInstalled.addListener(() => {
-  // Clear old version caches (v1 to v6)
+  // Clear old version caches (v1 to v7)
   chrome.storage.local.get(null, (items) => {
-    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v7'));
+    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v8'));
     if (keysToRemove.length > 0) {
       chrome.storage.local.remove(keysToRemove);
       console.log(`[LetterMarkd] Cleared ${keysToRemove.length} old cache entries.`);
@@ -34,7 +34,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function handleFetchRating(title, year) {
-  const cacheKey = `film_v7_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
+  const cacheKey = `film_v8_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
   const cached = await chrome.storage.local.get(cacheKey);
   if (cached[cacheKey] && (Date.now() - cached[cacheKey].timestamp < CACHE_TTL)) {
     return cached[cacheKey].data;
@@ -55,7 +55,7 @@ async function handleFetchRating(title, year) {
     if (watchProviders.length === 0) {
       try {
         const slug = lbResult.url.split('/film/')[1].split('/')[0];
-        const csiUrl = `https://letterboxd.com/csi/film/${slug}/justwatch/?esiAllowUser=true&esiAllowCountry=true`;
+        const csiUrl = `https://letterboxd.com/csi/film/${slug}/justwatch/`;
         const csiRes = await fetch(csiUrl);
         const csiHtml = await csiRes.text();
         watchProviders = parseWatchProviders(csiHtml);
@@ -167,11 +167,13 @@ function parseReviews(html) {
 function parseWatchProviders(html) {
   const providers = [];
   try {
-    // Look for JustWatch attributes or standard titles
-    const links = html.match(/title="(Stream|Rent|Buy) from (.*?)"/g);
-    if (links) {
-      for (const l of links) {
-        const name = l.match(/from (.*?)"/)[1].replace(/ on .*/, '').trim();
+    // Look for any title containing Stream/Rent/Buy from...
+    const matches = html.match(/title="[^"]*(Stream|Rent|Buy) from ([^"]+)"/g) || [];
+    
+    for (const match of matches) {
+      const nameMatch = match.match(/from (.*?)"/);
+      if (nameMatch) {
+        const name = nameMatch[1].replace(/ on .*/, '').trim();
         if (!providers.includes(name) && providers.length < 5) {
           providers.push(name);
         }

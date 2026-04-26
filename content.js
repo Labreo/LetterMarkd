@@ -190,7 +190,7 @@ async function showPanel(rect, query) {
       </div>
       <div class="lm-panel-tabs">
         <div class="lm-tab lm-active" data-tab="info">Info</div>
-        <div class="lm-tab" data-tab="reviews">Reviews (${data.reviews?.length || 0})</div>
+        <div class="lm-tab" data-tab="reviews">Reviews</div>
       </div>
       <div class="lm-panel-body">
         <div id="lm-tab-info" class="lm-tab-content lm-active">
@@ -208,7 +208,12 @@ async function showPanel(rect, query) {
           `).join('') || '<div style="text-align:center;padding:20px;color:#70757a;">No reviews yet.</div>'}
         </div>
       </div>
-      <div class="lm-panel-actions"><a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a></div>
+      <div class="lm-panel-actions">
+        <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a>
+        <div style="margin-top:12px; text-align:center;">
+          <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size:10px; color:#70757a; text-decoration:none; cursor:pointer;" onmouseover="this.style.color='#9ab'" onmouseout="this.style.color='#70757a'">Not the right movie? Search Letterboxd</a>
+        </div>
+      </div>
     `;
 
     currentPanel.querySelector('.lm-close').onclick = clearUI;
