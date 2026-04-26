@@ -68,7 +68,18 @@ function clearUI() {
 // Hover-based detection for streaming sites
 function isStreamingSite() {
   const host = window.location.hostname;
-  return /netflix\.com|primevideo\.com|disneyplus\.com|hulu\.com|max\.com|apple\.com/.test(host);
+  return host.includes('netflix.com') || 
+         host.includes('primevideo.com') || 
+         host.includes('amazon.com') || 
+         host.includes('disneyplus.com') || 
+         host.includes('hulu.com') || 
+         host.includes('max.com') || 
+         host.includes('hbomax.com') || 
+         host.includes('apple.com') || 
+         host.includes('paramountplus.com') || 
+         host.includes('peacocktv.com') || 
+         host.includes('tubitv.com') || 
+         host.includes('mubi.com');
 }
 
 if (isStreamingSite()) {

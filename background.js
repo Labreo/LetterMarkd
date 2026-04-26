@@ -5,7 +5,8 @@ const DEFAULT_ALLOWLIST = [
   'reddit.com', 'imdb.com', 'wikipedia.org', 'youtube.com', 'netflix.com', 
   'primevideo.com', 'amazon.com', 'disneyplus.com', 'max.com', 'hbomax.com',
   'hulu.com', 'rottentomatoes.com', 'metacritic.com', 'boxofficemojo.com',
-  'mubi.com', 'criterion.com', 'letterboxd.com', 'google.com'
+  'mubi.com', 'criterion.com', 'letterboxd.com', 'google.com',
+  'paramountplus.com', 'peacocktv.com', 'tubitv.com', 'apple.com'
 ];
 
 chrome.runtime.onInstalled.addListener(() => {
