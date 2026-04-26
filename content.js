@@ -89,15 +89,32 @@ function showBubble(rect, text) {
   currentBubble.id = 'lm-selection-bubble';
   currentBubble.innerHTML = `<span>★</span> Lettermarkd`;
   
-  // Position above the center of the selection
-  const top = rect.top + window.scrollY;
-  const left = rect.left + window.scrollX + (rect.width / 2);
+  const bubbleWidth = 110;
+  const bubbleHeight = 26;
+  const gap = 8;
+  
+  // Calculate horizontal center
+  let left = rect.left + window.scrollX + (rect.width / 2);
+  
+  // Guard horizontal edges
+  const padding = 10;
+  const minLeft = window.scrollX + (bubbleWidth / 2) + padding;
+  const maxLeft = window.scrollX + window.innerWidth - (bubbleWidth / 2) - padding;
+  left = Math.max(minLeft, Math.min(maxLeft, left));
+
+  // Determine vertical position (prefer below)
+  let top = rect.bottom + window.scrollY + gap;
+  
+  // Flip to top if no space below
+  if (top + bubbleHeight > window.scrollY + window.innerHeight) {
+    top = rect.top + window.scrollY - bubbleHeight - gap;
+  }
   
   currentBubble.style.top = `${top}px`;
   currentBubble.style.left = `${left}px`;
 
   currentBubble.addEventListener('mousedown', (e) => {
-    e.preventDefault(); // Keep text selected
+    e.preventDefault();
     e.stopPropagation();
     showPanel(rect, text);
   });
@@ -111,8 +128,28 @@ async function showPanel(rect, query) {
   currentPanel = document.createElement('div');
   currentPanel.id = 'lm-panel';
   
-  const top = rect.top + window.scrollY;
-  const left = rect.left + window.scrollX + (rect.width / 2);
+  const panelWidth = 280;
+  const panelHeight = 250; // Estimated max height
+  const gap = 8;
+  
+  // Calculate horizontal center
+  let left = rect.left + window.scrollX + (rect.width / 2);
+  
+  // Guard horizontal edges
+  const padding = 10;
+  const minLeft = window.scrollX + (panelWidth / 2) + padding;
+  const maxLeft = window.scrollX + window.innerWidth - (panelWidth / 2) - padding;
+  left = Math.max(minLeft, Math.min(maxLeft, left));
+
+  // Determine vertical position (prefer below)
+  let top = rect.bottom + window.scrollY + gap;
+  
+  // Flip to top if no space below or if selection is very low
+  if (top + panelHeight > window.scrollY + window.innerHeight) {
+    top = rect.top + window.scrollY - panelHeight - gap;
+    // Ensure we don't go off the top either
+    top = Math.max(window.scrollY + padding, top);
+  }
   
   currentPanel.style.top = `${top}px`;
   currentPanel.style.left = `${left}px`;
