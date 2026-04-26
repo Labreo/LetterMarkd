@@ -83,11 +83,14 @@ async function injectHoverCard() {
     if (!metaContainer) return;
 
     const ratingRow = document.createElement('div');
-    ratingRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-top:8px; font-weight:700; color:#00e054;';
+    ratingRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-top:8px; font-weight:700; color:#00e054; width:100%;';
     ratingRow.innerHTML = `
-      <span style="background:#14181c; padding:2px 6px; border-radius:4px; font-size:12px; border:1px solid #00e054;">Letterboxd</span>
-      <span>★ ${parseFloat(data.rating).toFixed(2)}</span>
-      <span style="font-size:12px; color:#aaa; font-weight:400;">(${data.year || 'Film'})</span>
+      <a href="${data.url}" target="_blank" title="${data.title}" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:8px;">
+        <span style="background:#14181c; padding:2px 6px; border-radius:4px; font-size:12px; border:1px solid #00e054;">Letterboxd</span>
+        <span>★ ${parseFloat(data.rating).toFixed(2)}</span>
+        <span style="font-size:12px; color:#aaa; font-weight:400;">(${data.year || 'Film'})</span>
+      </a>
+      <a href="mailto:support@lettermarkd.com?subject=Wrong Film Match: ${encodeURIComponent(title)}" style="margin-left:auto; font-size:10px; color:#666; text-decoration:underline; font-weight:400;">Report mismatch</a>
     `;
 
     metaContainer.appendChild(ratingRow);

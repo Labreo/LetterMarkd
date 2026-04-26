@@ -32,9 +32,16 @@ async function injectKnowledgePanel() {
   if (data && data.rating) {
     const row = document.createElement('div');
     row.className = 'lm-google-kp-row';
-    row.innerHTML = `<span>★ ${data.rating} on Letterboxd</span>`;
+    row.innerHTML = `
+      <a href="${data.url}" target="_blank" title="Matched as: ${data.title}" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:8px;">
+        <span style="background:#14181c; color:#00e054; padding:2px 6px; border-radius:4px; font-size:12px; border:1px solid #00e054; font-weight:bold;">Letterboxd</span>
+        <span style="color:#00e054; font-weight:bold;">★ ${data.rating}</span>
+        <span style="font-size:12px; color:#70757a;">(${data.year || 'Film'})</span>
+      </a>
+    `;
     titleEl.parentElement.appendChild(row);
   }
+
 }
 
 async function injectOrganicResults() {
