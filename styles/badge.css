@@ -1,49 +1,72 @@
-/* LetterMarkd Badge Styles */
+/* LetterMarkd Refined Badge Styles */
+
+/* The Pill Badge */
 .lettermarkd-badge {
-  display: inline-flex;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 46px;
+  height: 22px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(20, 24, 28, 0.85); /* Letterboxd Dark Grey */
-  color: #fff;
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: rgba(0, 0, 0, 0.7); /* 70% opacity black */
+  color: #ffffff;
+  border-radius: 11px; /* Perfect pill shape */
+  font-family: Arial, sans-serif;
   font-size: 12px;
-  font-weight: bold;
-  margin-left: 8px;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
+  font-weight: 500;
+  text-decoration: none;
   z-index: 9999;
-  position: relative;
+  backdrop-filter: blur(2px);
+  border: 0.5px solid rgba(255, 255, 255, 0.15);
+  pointer-events: auto;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease;
 }
 
 .lettermarkd-badge:hover {
-  background: #00e054; /* Letterboxd Green */
+  background: #00e054; /* Letterboxd Green on hover */
   color: #14181c;
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 
-.lettermarkd-badge.high-rating {
-  border-left: 3px solid #00e054;
+.lettermarkd-badge span {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
+/* Tooltip (Hover Only) */
 .lettermarkd-tooltip {
   position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 28px;
+  left: 0;
   background: #14181c;
   color: #fff;
-  padding: 8px;
-  border-radius: 8px;
-  width: 200px;
-  display: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  padding: 6px 10px;
+  border-radius: 6px;
   font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
 .lettermarkd-badge:hover .lettermarkd-tooltip {
-  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Low Rating Fade */
+.lettermarkd-low-rating-poster {
+  opacity: 0.5 !important;
+  transition: opacity 0.3s ease;
+}
+
+/* Utility to ensure parent is relative for absolute positioning */
+.lettermarkd-container {
+  position: relative !important;
 }

@@ -1,15 +1,12 @@
 // LetterMarkd Netflix Content Script
+const LOW_RATING_THRESHOLD = 2.5;
 
-/**
- * Sends a message to the background script to fetch a rating
- */
 async function getRating(title, year) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(
       { type: 'FETCH_RATING', title, year },
       (response) => {
-        if (chrome.runtime.lastError) {
-          console.error('Error fetching rating:', chrome.runtime.lastError);
+        if (chrome.runtime.lastError || !response || response.error) {
           resolve(null);
         } else {
           resolve(response);
@@ -19,18 +16,19 @@ async function getRating(title, year) {
   });
 }
 
-/**
- * Creates and injects the LetterMarkd badge
- */
 function createBadge(rating, url) {
+  if (!rating || rating === 'N/A' || rating === '?') return null;
+
   const badge = document.createElement('a');
   badge.href = url;
   badge.target = '_blank';
   badge.className = 'lettermarkd-badge';
-  if (parseFloat(rating) >= 3.5) badge.classList.add('high-rating');
   
+  // Format to two decimals if possible, otherwise use what we have
+  const displayRating = parseFloat(rating).toFixed(2).replace(/\.00$/, '');
+
   badge.innerHTML = `
-    <span>★ ${rating}</span>
+    <span>★ ${displayRating}</span>
     <div class="lettermarkd-tooltip">
       View on Letterboxd
     </div>
@@ -40,9 +38,6 @@ function createBadge(rating, url) {
   return badge;
 }
 
-/**
- * Netflix-specific injection logic
- */
 async function injectNetflix() {
   // Target title cards in rows
   const cards = document.querySelectorAll('.title-card');
@@ -50,34 +45,33 @@ async function injectNetflix() {
   for (const card of cards) {
     if (card.querySelector('.lettermarkd-badge')) continue;
 
-    // Netflix cards often hide the title in the aria-label of the link
     const link = card.querySelector('a[aria-label]');
     if (!link) continue;
 
     const title = link.getAttribute('aria-label');
     
-    // Create a container for the badge if it doesn't exist
-    const container = card.querySelector('.ptrack-content') || card;
-    
-    // Fetch rating
+    // The visual container for the poster
+    const posterContainer = card.querySelector('.boxshot-container') || card;
+    posterContainer.classList.add('lettermarkd-container');
+
     const data = await getRating(title);
-    if (data && data.rating) {
+    if (data && data.rating && data.rating !== 'N/A') {
       const badge = createBadge(data.rating, data.url);
-      container.appendChild(badge);
+      if (badge) {
+        posterContainer.appendChild(badge);
+
+        // Apply low rating fade if below threshold
+        if (parseFloat(data.rating) < LOW_RATING_THRESHOLD) {
+          const img = posterContainer.querySelector('img');
+          if (img) img.classList.add('lettermarkd-low-rating-poster');
+        }
+      }
     }
   }
 }
 
-// Observe DOM changes for dynamic content loading
-const observer = new MutationObserver((mutations) => {
-  // Debounce or throttle could be added here
-  injectNetflix();
-});
+// Observe DOM changes
+const observer = new MutationObserver(() => injectNetflix());
+observer.observe(document.body, { childList: true, subtree: true });
 
-observer.observe(document.body, { 
-  childList: true, 
-  subtree: true 
-});
-
-// Initial run
 injectNetflix();
