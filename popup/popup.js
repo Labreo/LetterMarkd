@@ -2,10 +2,6 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   const elements = {
-    connectBtn: document.getElementById('connectBtn'),
-    authContainer: document.getElementById('authContainer'),
-    userContainer: document.getElementById('userContainer'),
-    username: document.getElementById('username'),
     thresholdSlider: document.getElementById('threshold-slider'),
     thresholdVal: document.getElementById('threshold-val'),
     openOptions: document.getElementById('openOptions'),
@@ -19,16 +15,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 1. Load Settings
   const settings = await chrome.storage.local.get([
-    'authToken', 'username', 'threshold', 
+    'threshold', 
     'enabled_netflix', 'enabled_prime', 'enabled_disney', 'enabled_google'
   ]);
-
-  // Auth State
-  if (settings.authToken) {
-    elements.authContainer.style.display = 'none';
-    elements.userContainer.style.display = 'block';
-    elements.username.textContent = `@${settings.username || 'user'}`;
-  }
 
   // Threshold
   const currentThreshold = settings.threshold || 2.5;
@@ -42,13 +31,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 2. Event Listeners
-  
-  // Auth
-  elements.connectBtn.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ type: 'START_AUTH' }, (response) => {
-      if (response && response.success) location.reload();
-    });
-  });
 
   // Threshold Slider
   elements.thresholdSlider.addEventListener('input', (e) => {

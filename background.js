@@ -15,12 +15,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     return true;
   }
-
-  if (request.type === 'START_AUTH') {
-    handleAuthFlow().then(sendResponse).catch(err => sendResponse({ success: false, error: err.message }));
-    return true;
-  }
 });
+
 
 async function handleFetchRating(title, year) {
   const cacheKey = `film_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
@@ -102,34 +98,3 @@ function parseRatingFromJsonLd(html) {
   } catch (e) { return null; }
 }
 
-async function handleAuthFlow() {
-  // MOCK FLOW: Simulates Letterboxd OAuth since official API keys aren't provisioned yet
-  return new Promise((resolve) => {
-    setTimeout(async () => {
-      const mockToken = 'lbx_mock_token_88912';
-      const mockUser = 'cinephile2026';
-      await chrome.storage.local.set({ authToken: mockToken, username: mockUser });
-      resolve({ success: true, username: mockUser });
-    }, 800);
-  });
-}
-
-async function handlePerformAction(action, filmId) {
-  // MOCK ACTION: Simulates adding to watchlist or marking as watched
-  const { authToken } = await chrome.storage.local.get('authToken');
-  if (!authToken) return { success: false, error: 'Not logged in' };
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ success: true });
-    }, 600);
-  });
-}
-
-// Ensure PERFORM_ACTION is handled in the root listener
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'PERFORM_ACTION') {
-    handlePerformAction(request.action, request.filmId).then(sendResponse);
-    return true;
-  }
-});
