@@ -9,9 +9,9 @@ const DEFAULT_ALLOWLIST = [
 ];
 
 chrome.runtime.onInstalled.addListener(() => {
-  // Clear old version caches (v1 to v9)
+  // Clear old version caches (v1 to v10)
   chrome.storage.local.get(null, (items) => {
-    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v10'));
+    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v11'));
     if (keysToRemove.length > 0) {
       chrome.storage.local.remove(keysToRemove);
       console.log(`[LetterMarkd] Cleared ${keysToRemove.length} old cache entries.`);
@@ -26,16 +26,17 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'SEARCH_FILM') {
-    handleFetchRating(request.query, null)
+    handleFetchRating(request.query, null, sender.tab?.id)
       .then(res => sendResponse(res))
       .catch(err => sendResponse({ error: err.message }));
     return true;
   }
 });
 
-async function handleFetchRating(title, year) {
-  const cacheKey = `film_v10_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
+async function handleFetchRating(title, year, tabId) {
+  const cacheKey = `film_v11_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
   const cached = await chrome.storage.local.get(cacheKey);
+  
   if (cached[cacheKey] && (Date.now() - cached[cacheKey].timestamp < CACHE_TTL)) {
     return cached[cacheKey].data;
   }
@@ -62,19 +63,25 @@ async function handleFetchRating(title, year) {
       } catch (e) {}
     }
 
-    // Stage 3: Extra Stats (IMDb & Mojo)
-    let extraStats = { imdbRating: null, boxOffice: null, budget: null };
+    // Initial result with just Letterboxd data (FAST)
+    const result = { 
+      ...parsedData, 
+      reviews, 
+      watchProviders, 
+      extraStats: { loading: true }, 
+      url: lbResult.url, 
+      title: lbResult.title, 
+      year: lbResult.year 
+    };
+
+    // Trigger extra stats in the background (SLOW)
     const imdbId = extractImdbId(html);
-    if (imdbId) {
-      const [imdbData, mojoData] = await Promise.all([
-        fetchImdbRating(imdbId).catch(() => ({ imdbRating: null })),
-        fetchMojoFinancials(imdbId).catch(() => ({ boxOffice: null, budget: null }))
-      ]);
-      extraStats = { ...imdbData, ...mojoData };
+    if (imdbId && tabId) {
+      fetchExtraStatsAndNotify(imdbId, result, cacheKey, tabId);
+    } else {
+      chrome.storage.local.set({ [cacheKey]: { data: result, timestamp: Date.now() } });
     }
 
-    const result = { ...parsedData, reviews, watchProviders, extraStats, url: lbResult.url, title: lbResult.title, year: lbResult.year };
-    chrome.storage.local.set({ [cacheKey]: { data: result, timestamp: Date.now() } });
     return result;
   } catch (e) { return { error: e.message }; }
 }
@@ -180,35 +187,53 @@ function extractImdbId(html) {
   return match ? match[1] : null;
 }
 
-async function fetchImdbRating(id) {
+async function fetchExtraStatsAndNotify(imdbId, baseData, cacheKey, tabId) {
   try {
-    const res = await fetch(`https://www.imdb.com/title/${id}/`);
-    const html = await res.text();
-    const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-    if (ldMatch) {
-      const data = JSON.parse(ldMatch[1]);
-      return { imdbRating: data.aggregateRating?.ratingValue || null };
-    }
-  } catch (e) {}
-  return { imdbRating: null };
-}
+    const [imdbRes, mojoRes] = await Promise.all([
+      fetchWithTimeout(`https://www.imdb.com/title/${imdbId}/`, 2500).catch(() => null),
+      fetchWithTimeout(`https://www.boxofficemojo.com/title/${imdbId}/`, 2500).catch(() => null)
+    ]);
 
-async function fetchMojoFinancials(id) {
-  try {
-    const res = await fetch(`https://www.boxofficemojo.com/title/${id}/`);
-    const html = await res.text();
+    let imdbRating = null;
     let boxOffice = null;
     let budget = null;
 
-    const wwMatch = html.match(/Worldwide<\/span><span class="money">([^<]+)<\/span>/);
-    if (wwMatch) boxOffice = wwMatch[1];
+    if (imdbRes) {
+      const html = await imdbRes.text();
+      const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+      if (ldMatch) {
+        try {
+          const data = JSON.parse(ldMatch[1]);
+          imdbRating = data.aggregateRating?.ratingValue || null;
+        } catch (e) {}
+      }
+    }
 
-    const bMatch = html.match(/Budget<\/span><span class="money">([^<]+)<\/span>/);
-    if (bMatch) budget = bMatch[1];
+    if (mojoRes) {
+      const html = await mojoRes.text();
+      const wwMatch = html.match(/Worldwide<\/span><span class="money">([^<]+)<\/span>/);
+      if (wwMatch) boxOffice = wwMatch[1];
+      const bMatch = html.match(/Budget<\/span><span class="money">([^<]+)<\/span>/);
+      if (bMatch) budget = bMatch[1];
+    }
 
-    return { boxOffice, budget };
-  } catch (e) {}
-  return { boxOffice: null, budget: null };
+    const finalData = { ...baseData, extraStats: { imdbRating, boxOffice, budget, loading: false } };
+    chrome.storage.local.set({ [cacheKey]: { data: finalData, timestamp: Date.now() } });
+    
+    // Notify the content script that extra stats are ready
+    chrome.tabs.sendMessage(tabId, { type: 'EXTRA_STATS_READY', data: finalData });
+  } catch (e) {
+    const failedData = { ...baseData, extraStats: { loading: false } };
+    chrome.storage.local.set({ [cacheKey]: { data: failedData, timestamp: Date.now() } });
+  }
+}
+
+async function fetchWithTimeout(url, timeout = 3000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  const response = await fetch(url, { signal: controller.signal });
+  clearTimeout(id);
+  return response;
 }
 
 function parseWatchProviders(html) {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LetterMarkd",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Universal Letterboxd ratings for any movie title you highlight.",
   "permissions": [
     "storage",
@@ -35,6 +35,8 @@
     "128": "icons/icon128.png"
   },
   "host_permissions": [
-    "https://letterboxd.com/*"
+    "https://letterboxd.com/*",
+    "https://www.imdb.com/*",
+    "https://www.boxofficemojo.com/*"
   ]
 }

@@ -34,6 +34,10 @@ loadSettings();
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'SETTINGS_UPDATED') loadSettings();
+  if (msg.type === 'EXTRA_STATS_READY' && currentPanel) {
+    // Only re-render if we are looking at the same movie
+    renderFullPanel(msg.data, msg.data.title);
+  }
 });
 
 document.addEventListener('selectionchange', () => {
@@ -145,12 +149,11 @@ function showBubble(rect, text) {
   };
 }
 
-async function showPanel(rect, query) {
+function showPanel(rect, query) {
   clearUI();
   currentPanel = document.createElement('div');
   currentPanel.id = 'lm-panel';
   
-  const panelWidth = 320;
   const left = Math.max(10, Math.min(window.innerWidth - 330, rect.left + window.scrollX + (rect.width / 2) - 160));
   const top = rect.bottom + window.scrollY + 10;
   
@@ -174,77 +177,86 @@ async function showPanel(rect, query) {
       return;
     }
 
-    const stars = getStarString(data.rating);
-    currentPanel.innerHTML = `
-      <button class="lm-close">&times;</button>
-      <div class="lm-panel-header">
-        ${data.image ? `<img src="${data.image}" class="lm-poster">` : ''}
-        <div class="lm-panel-info">
-          <div class="lm-panel-title">${data.title} <span style="color:#9ab;font-weight:normal;">${data.year || ''}</span></div>
-          <div class="lm-panel-rating">
-            <span style="letter-spacing:2px;">${stars}</span>
-            <span style="color:#fff;margin-left:6px;">${data.rating}</span>
-          </div>
-          <div style="font-size:11px;color:#70757a;margin-top:4px;">${data.ratingCount || ''} ratings &bull; ${data.reviewCount || ''} reviews</div>
-        </div>
-      </div>
-      <div class="lm-panel-tabs">
-        <div class="lm-tab lm-active" data-tab="info">Info</div>
-        <div class="lm-tab" data-tab="reviews">Reviews</div>
-      </div>
-      <div class="lm-panel-body">
-        <div id="lm-tab-info" class="lm-tab-content lm-active">
-          <div class="lm-info-list">
-            <div class="lm-info-item"><strong>Director:</strong> ${data.director || 'N/A'}</div>
-            <div class="lm-info-item"><strong>Cast:</strong> ${data.cast || 'N/A'}</div>
-            <div class="lm-info-item"><strong>Genres:</strong> ${data.genres?.join(', ') || 'N/A'}</div>
-            <div class="lm-info-item" style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 12px; padding-top: 12px;">
-              <strong>IMDb Rating:</strong> <span style="color:var(--accent); font-weight: bold;">★ ${data.extraStats?.imdbRating || 'N/A'}</span>
-            </div>
-            <div class="lm-info-item"><strong>Box Office:</strong> <span style="color: #fff;">${data.extraStats?.boxOffice || 'N/A'}</span></div>
-            <div class="lm-info-item"><strong>Budget:</strong> <span style="color: #fff;">${data.extraStats?.budget || 'N/A'}</span></div>
-          </div>
-          
-          ${data.watchProviders?.length ? `
-            <div class="lm-where-watch" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
-              <div style="font-size: 11px; color: #9ab; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">Where to Watch</div>
-              <div class="lm-watch-list">
-                ${data.watchProviders.map(p => `<span class="lm-watch-item">${p}</span>`).join('')}
-              </div>
-            </div>
-          ` : ''}
-        </div>
-        <div id="lm-tab-reviews" class="lm-tab-content">
-          ${(data.reviews || []).map((r, i) => `
-            <div class="lm-review-card">
-              <div class="lm-review-author"><span>${r.author}</span><span style="color:#E9C46A;">${r.rating || ''}</span></div>
-              ${r.isSpoiler ? `<div class="lm-spoiler-warning" id="lm-s-${i}">Spoiler! <span class="lm-reveal-link" data-r="lm-t-${i}" data-w="lm-s-${i}">Show</span></div><div class="lm-review-text" id="lm-t-${i}" style="display:none;">${r.text}</div>` : `<div class="lm-review-text">${r.text}</div>`}
-            </div>
-          `).join('') || '<div style="text-align:center;padding:20px;color:#70757a;">No reviews yet.</div>'}
-        </div>
-      </div>
-      <div class="lm-panel-actions">
-        <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a>
-        <div style="margin-top:12px; text-align:center;">
-          <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size:10px; color:#70757a; text-decoration:none; cursor:pointer;" onmouseover="this.style.color='#9ab'" onmouseout="this.style.color='#70757a'">Not the right movie? Search Letterboxd</a>
-        </div>
-      </div>
-    `;
+    renderFullPanel(data, query);
+  });
+}
 
-    currentPanel.querySelector('.lm-close').onclick = clearUI;
-    const tabs = currentPanel.querySelectorAll('.lm-tab');
-    tabs.forEach(t => t.onclick = () => {
-      tabs.forEach(x => x.classList.remove('lm-active'));
-      t.classList.add('lm-active');
-      const target = t.getAttribute('data-tab');
-      currentPanel.querySelector('#lm-tab-info').style.display = target === 'info' ? 'block' : 'none';
-      currentPanel.querySelector('#lm-tab-reviews').style.display = target === 'reviews' ? 'block' : 'none';
-    });
+function renderFullPanel(data, query) {
+  if (!currentPanel) return;
+  const stars = getStarString(data.rating);
+  
+  // Preserve active tab if we are re-rendering
+  const activeTab = currentPanel.querySelector('.lm-tab.lm-active')?.getAttribute('data-tab') || 'info';
 
-    currentPanel.querySelectorAll('.lm-reveal-link').forEach(l => l.onclick = (e) => {
-      currentPanel.querySelector(`#${l.getAttribute('data-r')}`).style.display = 'block';
-      currentPanel.querySelector(`#${l.getAttribute('data-w')}`).style.display = 'none';
-    });
+  currentPanel.innerHTML = `
+    <button class="lm-close">&times;</button>
+    <div class="lm-panel-header">
+      ${data.image ? `<img src="${data.image}" class="lm-poster">` : ''}
+      <div class="lm-panel-info">
+        <div class="lm-panel-title">${data.title} <span style="color:#9ab;font-weight:normal;">${data.year || ''}</span></div>
+        <div class="lm-panel-rating">
+          <span style="letter-spacing:2px;">${stars}</span>
+          <span style="color:#fff;margin-left:6px;">${data.rating}</span>
+        </div>
+        <div style="font-size:11px;color:#70757a;margin-top:4px;">${data.ratingCount || ''} ratings &bull; ${data.reviewCount || ''} reviews</div>
+      </div>
+    </div>
+    <div class="lm-panel-tabs">
+      <div class="lm-tab ${activeTab === 'info' ? 'lm-active' : ''}" data-tab="info">Info</div>
+      <div class="lm-tab ${activeTab === 'reviews' ? 'lm-active' : ''}" data-tab="reviews">Reviews</div>
+    </div>
+    <div class="lm-panel-body">
+      <div id="lm-tab-info" class="lm-tab-content" style="display: ${activeTab === 'info' ? 'block' : 'none'};">
+        <div class="lm-info-list">
+          <div class="lm-info-item"><strong>Director:</strong> ${data.director || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Cast:</strong> ${data.cast || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Genres:</strong> ${data.genres?.join(', ') || 'N/A'}</div>
+          <div class="lm-info-item" style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 12px; padding-top: 12px;">
+            <strong>IMDb Rating:</strong> <span style="color:var(--accent); font-weight: bold;">★ ${data.extraStats?.imdbRating || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span>
+          </div>
+          <div class="lm-info-item"><strong>Box Office:</strong> <span style="color: #fff;">${data.extraStats?.boxOffice || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span></div>
+          <div class="lm-info-item"><strong>Budget:</strong> <span style="color: #fff;">${data.extraStats?.budget || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span></div>
+        </div>
+        
+        ${data.watchProviders?.length ? `
+          <div class="lm-where-watch" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+            <div style="font-size: 11px; color: #9ab; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">Where to Watch</div>
+            <div class="lm-watch-list">
+              ${data.watchProviders.map(p => `<span class="lm-watch-item">${p}</span>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+      <div id="lm-tab-reviews" class="lm-tab-content" style="display: ${activeTab === 'reviews' ? 'block' : 'none'};">
+        ${(data.reviews || []).map((r, i) => `
+          <div class="lm-review-card">
+            <div class="lm-review-author"><span>${r.author}</span><span style="color:#E9C46A;">${r.rating || ''}</span></div>
+            ${r.isSpoiler ? `<div class="lm-spoiler-warning" id="lm-s-${i}">Spoiler! <span class="lm-reveal-link" data-r="lm-t-${i}" data-w="lm-s-${i}">Show</span></div><div class="lm-review-text" id="lm-t-${i}" style="display:none;">${r.text}</div>` : `<div class="lm-review-text">${r.text}</div>`}
+          </div>
+        `).join('') || '<div style="text-align:center;padding:20px;color:#70757a;">No reviews yet.</div>'}
+      </div>
+    </div>
+    <div class="lm-panel-actions">
+      <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a>
+      <div style="margin-top:12px; text-align:center;">
+        <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size:10px; color:#70757a; text-decoration:none; cursor:pointer;" onmouseover="this.style.color='#9ab'" onmouseout="this.style.color='#70757a'">Not the right movie? Search Letterboxd</a>
+      </div>
+    </div>
+  `;
+
+  currentPanel.querySelector('.lm-close').onclick = clearUI;
+  const tabs = currentPanel.querySelectorAll('.lm-tab');
+  tabs.forEach(t => t.onclick = () => {
+    tabs.forEach(x => x.classList.remove('lm-active'));
+    t.classList.add('lm-active');
+    const target = t.getAttribute('data-tab');
+    currentPanel.querySelector('#lm-tab-info').style.display = target === 'info' ? 'block' : 'none';
+    currentPanel.querySelector('#lm-tab-reviews').style.display = target === 'reviews' ? 'block' : 'none';
+  });
+
+  currentPanel.querySelectorAll('.lm-reveal-link').forEach(l => l.onclick = (e) => {
+    currentPanel.querySelector(`#${l.getAttribute('data-r')}`).style.display = 'block';
+    currentPanel.querySelector(`#${l.getAttribute('data-w')}`).style.display = 'none';
   });
 }
 

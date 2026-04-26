@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "LetterMarkd",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Letterboxd ratings and actions overlaid on any movie-related webpage.",
   "browser_specific_settings": {
     "gecko": {
@@ -11,7 +11,9 @@
   },
   "permissions": [
     "storage",
-    "https://letterboxd.com/*"
+    "https://letterboxd.com/*",
+    "https://www.imdb.com/*",
+    "https://www.boxofficemojo.com/*"
   ],
   "background": {
     "scripts": ["background.js"],
