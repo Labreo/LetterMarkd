@@ -39,18 +39,19 @@ async function handleFetchRating(title, year) {
     const response = await fetch(lbResult.url);
     const html = await response.text();
 
-    const rating = parseRatingFromJsonLd(html);
-    console.log(`[LetterMarkd] Scraped rating: ${rating}`);
+    const parsedData = parseRatingFromJsonLd(html);
+    console.log(`[LetterMarkd] Scraped rating: ${parsedData.rating}`);
 
     const result = {
-      rating: rating,
+      rating: parsedData.rating,
+      count: parsedData.count,
       url: response.url,
       title: lbResult.title || title,
       year: lbResult.year || year,
       genres: []
     };
 
-    if (rating !== null && rating !== undefined) {
+    if (parsedData.rating !== null && parsedData.rating !== undefined) {
       await chrome.storage.local.set({ [cacheKey]: { data: result, timestamp: Date.now() } });
     }
     return result;
@@ -95,19 +96,24 @@ async function guessLetterboxdSlug(title, year) {
 function parseRatingFromJsonLd(html) {
   try {
     const ldJsonMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-    if (!ldJsonMatch) return null;
+    if (!ldJsonMatch) return { rating: null, count: null };
     const data = JSON.parse(ldJsonMatch[1]);
     
     const extract = (obj) => {
-      const val = obj.aggregateRating ? obj.aggregateRating.ratingValue : null;
-      return (val && !isNaN(parseFloat(val))) ? parseFloat(val).toFixed(2) : null;
+      if (!obj.aggregateRating) return { rating: null, count: null };
+      const val = obj.aggregateRating.ratingValue;
+      const count = obj.aggregateRating.ratingCount;
+      return {
+        rating: (val && !isNaN(parseFloat(val))) ? parseFloat(val).toFixed(2) : null,
+        count: count ? count.toLocaleString() : null
+      };
     };
 
     if (Array.isArray(data)) {
       const film = data.find(i => i['@type'] === 'Movie');
-      return film ? extract(film) : null;
+      return film ? extract(film) : { rating: null, count: null };
     }
     return extract(data);
-  } catch (e) { return null; }
+  } catch (e) { return { rating: null, count: null }; }
 }
 

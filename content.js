@@ -124,10 +124,15 @@ async function showPanel(rect, query) {
       <button class="lm-close">&times;</button>
       <div class="lm-panel-header">
         <a href="${data.url}" target="_blank" class="lm-panel-title">${data.title} ${data.year ? `(${data.year})` : ''}</a>
-        <div class="lm-panel-rating">★ ${data.rating}</div>
+        <div class="lm-panel-rating">
+          ★ ${data.rating}
+          ${data.count ? `<span style="font-size:11px; color:#70757a; font-weight:normal; margin-left:6px;">(${data.count} ratings)</span>` : ''}
+        </div>
       </div>
       <div class="lm-panel-actions">
-        <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">Open Letterboxd</a>
+        <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View</a>
+        <a href="${data.url}" target="_blank" class="lm-btn">Watched</a>
+        <a href="${data.url}" target="_blank" class="lm-btn">Watchlist</a>
       </div>
     `;
     
