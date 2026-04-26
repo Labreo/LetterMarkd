@@ -3,6 +3,7 @@ let currentBubble = null;
 let currentPanel = null;
 let currentPrompt = null;
 let debounceTimer = null;
+let hoverTimer = null; // New timer for hover-based detection
 
 let allowlist = [];
 let blocklist = [];
@@ -61,6 +62,44 @@ function clearUI() {
   if (currentBubble) { currentBubble.remove(); currentBubble = null; }
   if (currentPanel) { currentPanel.remove(); currentPanel = null; }
   if (currentPrompt) { currentPrompt.remove(); currentPrompt = null; }
+  clearTimeout(hoverTimer);
+}
+
+// Hover-based detection for streaming sites
+function isStreamingSite() {
+  const host = window.location.hostname;
+  return /netflix\.com|primevideo\.com|disneyplus\.com|hulu\.com|max\.com|apple\.com/.test(host);
+}
+
+if (isStreamingSite()) {
+  document.addEventListener('mouseover', (e) => {
+    // Only trigger if we aren't already showing a panel
+    if (currentPanel) return;
+
+    const target = e.target.closest('[aria-label]');
+    if (target) {
+      const label = target.getAttribute('aria-label');
+      // Basic heuristic to filter out non-movie labels
+      if (label && label.length > 1 && label.length < 80 && !label.includes('Menu') && !label.includes('Search')) {
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(() => {
+          showBubble(target.getBoundingClientRect(), label, true);
+        }, 400); // 400ms hover debounce
+      }
+    }
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    if (currentBubble && currentBubble.dataset.hover === 'true') {
+      // Small delay before clearing to allow clicking the bubble
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => {
+        if (currentBubble && !currentBubble.matches(':hover')) {
+          clearUI();
+        }
+      }, 500);
+    }
+  });
 }
 
 function handleSelection() {
@@ -137,10 +176,11 @@ function updateSitePermission(enable) {
   });
 }
 
-function showBubble(rect, text) {
+function showBubble(rect, text, isHover = false) {
   if (currentBubble || currentPanel) return;
   currentBubble = document.createElement('div');
   currentBubble.id = 'lm-selection-bubble';
+  if (isHover) currentBubble.dataset.hover = 'true';
   
   const top = rect.bottom + window.scrollY + 8;
   const left = rect.left + window.scrollX + (rect.width / 2);
@@ -195,13 +235,17 @@ function renderFullPanel(data, query) {
   const logoSvg = `
     <svg class="lm-header-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#00e054" />
+        <linearGradient id="ribbon-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#ff8000" />
+          <stop offset="50%" style="stop-color:#00e054" />
           <stop offset="100%" style="stop-color:#40bcf4" />
         </linearGradient>
       </defs>
-      <rect width="100" height="100" rx="20" fill="#12161b" />
-      <path d="M35 25 V75 H65" stroke="url(#logo-grad)" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+      <rect width="100" height="100" rx="22" fill="#12161b" />
+      <!-- The White L -->
+      <path d="M32 28 V72 H68" stroke="white" stroke-width="11" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- The Branded Ribbon -->
+      <path d="M50 25 V55 L60 48 L70 55 V25 Z" fill="url(#ribbon-grad)" />
     </svg>
   `;
 

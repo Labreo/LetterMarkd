@@ -19,6 +19,10 @@ LetterMarkd was built to solve the "context switching" problem for cinephiles. I
 - **CORS & Scraping**: Successfully bypassed the need for expensive/restricted APIs (OMDb/TMDB) by using robust background scraping with customized `User-Agent` headers and `AbortController` timeouts.
 - **Region-Sensing JustWatch**: Implemented a "Stage 2 CSI" fetch that forces Letterboxd to return region-accurate streaming providers by passing `esiAllowUser=true&esiAllowCountry=true` parameters.
 
+### 🎢 Accessibility-Led Hover Discovery (The "Unbreakable" Selector)
+- **The Shift**: Moved from fragile, site-specific DOM selectors to a universal `[aria-label]` hover-based approach for streaming platforms (Netflix, Disney+, etc.).
+- **Impact**: By leveraging accessibility standards, we achieved a discovery mechanism that is both non-intrusive and highly resistant to UI updates, while functioning on platforms where text selection is disabled.
+
 ### 🛠️ Build & Architecture
 - **Unified Build System**: Created a `build.sh` script that manages the structural differences between Chrome (Manifest V3) and Firefox (Manifest V2), ensuring parity across browsers.
 - **Cache Purge Engine**: Developed a version-based cache invalidation system (`film_v1` through `film_v12`) to ensure users always receive the latest scraping logic without manual cache clearing.
