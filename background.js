@@ -62,32 +62,58 @@ async function handleFetchRating(title, year) {
 }
 
 async function guessLetterboxdSlug(title, year) {
-  // Letterboxd's search endpoint is heavily protected by Cloudflare Turnstile challenges.
-  // MV3 Service Workers cannot solve JS captchas, so fetch() fails silently.
-  // Instead, we predict the canonical slug and hit the unprotected /film/ page directly.
-  
-  let baseSlug = title.toLowerCase()
-    .replace(/&/g, 'and')
-    .replace(/['".,;:!?()[\]{}]/g, '') // remove punctuation
-    .replace(/[^a-z0-9]+/g, '-')       // replace spaces/symbols with hyphens
-    .replace(/^-+|-+$/g, '');          // trim leading/trailing hyphens
+  let cleanTitle = title;
+  let detectedYear = year;
 
-  const attempts = [
-    `https://letterboxd.com/film/${baseSlug}/`
-  ];
-  
-  if (year) {
-    attempts.push(`https://letterboxd.com/film/${baseSlug}-${year}/`);
+  // 1. Extract year if it's in the title string like "The Matrix (1999)"
+  const yearMatch = title.match(/\(?(\d{4})\)?$/);
+  if (yearMatch) {
+    detectedYear = yearMatch[1];
+    cleanTitle = title.replace(yearMatch[0], '').trim();
   }
 
-  for (const url of attempts) {
+  const toSlug = (text) => {
+    return text.toLowerCase()
+      .replace(/&/g, 'and')
+      .replace(/['".,;:!?()[\]{}]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
+  const baseSlug = toSlug(cleanTitle);
+  const attempts = new Set();
+  
+  // Try exact slug
+  attempts.add(baseSlug);
+  
+  // Try with year if we have it
+  if (detectedYear) {
+    attempts.add(`${baseSlug}-${detectedYear}`);
+  }
+
+  // Try both removing and adding "the-" prefix for maximum coverage
+  if (baseSlug.startsWith('the-')) {
+    const noThe = baseSlug.replace(/^the-/, '');
+    attempts.add(noThe);
+    if (detectedYear) attempts.add(`${noThe}-${detectedYear}`);
+  } else {
+    const withThe = `the-${baseSlug}`;
+    attempts.add(withThe);
+    if (detectedYear) attempts.add(`${withThe}-${detectedYear}`);
+  }
+
+  console.log(`[LetterMarkd] Trying slugs for "${title}":`, Array.from(attempts));
+
+  for (const slug of attempts) {
+    const url = `https://letterboxd.com/film/${slug}/`;
     try {
+      // Use GET request (standard)
       const res = await fetch(url);
       if (res.status === 200) {
-        return { url, title, year };
+        return { url, title: cleanTitle, year: detectedYear };
       }
     } catch (e) {
-      console.error('[LetterMarkd] Slug fetch error:', e);
+      console.error('[LetterMarkd] Slug probe error:', e);
     }
   }
   

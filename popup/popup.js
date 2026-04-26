@@ -2,8 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   const elements = {
-    toggleMaster: document.getElementById('toggle-master'),
-    openOptions: document.getElementById('openOptions')
+    toggleMaster: document.getElementById('toggle-master')
   };
 
   // 1. Load Settings
@@ -13,11 +12,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 2. Event Listeners
   elements.toggleMaster.addEventListener('change', (e) => {
     chrome.storage.local.set({ enabled: e.target.checked });
-  });
-
-  elements.openOptions.addEventListener('click', (e) => {
-    e.preventDefault();
-    chrome.runtime.openOptionsPage();
   });
 });
 

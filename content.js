@@ -45,8 +45,16 @@ async function handleSelection() {
 
   // Validate selection length (2 to 60 chars)
   if (text.length >= 2 && text.length <= 60 && !text.includes('\n')) {
-    const { enabled } = await chrome.storage.local.get(['enabled']);
-    if (enabled === false) return;
+    // Safety check for extension reloads
+    if (!chrome.runtime?.id) return;
+
+    try {
+      const { enabled } = await chrome.storage.local.get(['enabled']);
+      if (enabled === false) return;
+    } catch (e) {
+      // Extension context invalidated - script is orphaned
+      return;
+    }
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
