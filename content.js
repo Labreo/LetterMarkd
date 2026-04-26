@@ -104,12 +104,15 @@ function showBubble(rect, text) {
 
   // Determine vertical position (prefer below)
   let top = rect.bottom + window.scrollY + gap;
+  let posClass = 'lm-pos-bottom';
   
   // Flip to top if no space below
   if (top + bubbleHeight > window.scrollY + window.innerHeight) {
     top = rect.top + window.scrollY - bubbleHeight - gap;
+    posClass = 'lm-pos-top';
   }
   
+  currentBubble.className = posClass;
   currentBubble.style.top = `${top}px`;
   currentBubble.style.left = `${left}px`;
 
