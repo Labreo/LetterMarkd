@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LetterMarkd Settings</title>
+  <style>
+    :root {
+      --bg: #14181c;
+      --card: #1b2228;
+      --accent: #E9C46A;
+      --text: #ffffff;
+      --text-dim: #9ab;
+      --danger: #ff4b5c;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 20px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 24px;
+      letter-spacing: -0.5px;
+    }
+    h1 span { color: var(--accent); }
+
+    .section {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .section h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: var(--accent);
+    }
+
+    .description {
+      color: var(--text-dim);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      background: #14181c;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      box-sizing: border-box;
+      min-height: 100px;
+      margin-bottom: 12px;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .btn-save {
+      background: var(--accent);
+      color: #14181c;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .btn-save:active { transform: scale(0.98); }
+
+    .status {
+      margin-left: 12px;
+      font-size: 14px;
+      color: var(--accent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .status.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+  <h1><span>★</span> LetterMarkd Settings</h1>
+
+  <div class="section">
+    <h2>🚫 Blocklist</h2>
+    <p class="description">Never show the Letterboxd bubble on these websites. Enter one domain per line (e.g., youtube.com).</p>
+    <textarea id="blocklist" placeholder="youtube.com&#10;imdb.com"></textarea>
+  </div>
+
+  <div class="section">
+    <h2>✅ Allowlist (Strict Mode)</h2>
+    <p class="description">If you enter any domains here, Letterboxd will <b>only</b> appear on these websites. Leave empty to enable Letterboxd everywhere (except the blocklist).</p>
+    <textarea id="allowlist" placeholder="reddit.com&#10;wikipedia.org"></textarea>
+  </div>
+
+  <div style="display: flex; align-items: center;">
+    <button id="save" class="btn-save">Save Settings</button>
+    <span id="status" class="status">Settings saved!</span>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

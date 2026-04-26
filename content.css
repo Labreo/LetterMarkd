@@ -303,3 +303,33 @@
   display: inline-block;
   vertical-align: middle;
 }
+
+#lm-permission-prompt {
+  position: absolute;
+  z-index: 2147483647;
+  background: #14181c;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-family: Georgia, serif;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 13px;
+  animation: lmFadeIn 200ms ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 220px;
+}
+
+.lm-prompt-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.lm-btn-small {
+  flex: 1;
+  padding: 6px;
+  font-size: 11px;
+  font-weight: bold;
+}
