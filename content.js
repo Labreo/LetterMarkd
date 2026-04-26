@@ -136,8 +136,9 @@ async function showPanel(rect, query) {
     if (chrome.runtime.lastError || !data || !data.rating) {
       currentPanel.innerHTML = `
         <button class="lm-close">&times;</button>
-        <div class="lm-panel-header" style="padding: 24px;">
-          <div style="color:#e00054; font-size:13px;">No film found for that title.</div>
+        <div class="lm-panel-header" style="padding: 24px; flex-direction: column; align-items: center; text-align: center;">
+          <div style="color:#e00054; font-size:13px; margin-bottom: 12px;">No rating found for "${query}"</div>
+          <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" class="lm-btn lm-btn-primary" style="width: 100%;">Search on Letterboxd</a>
         </div>
       `;
       currentPanel.querySelector('.lm-close').addEventListener('click', () => clearUI());
@@ -163,6 +164,8 @@ async function showPanel(rect, query) {
         <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a>
         <a href="${data.url}" target="_blank" class="lm-btn">+ Watchlist</a>
         <a href="${data.url}" target="_blank" class="lm-btn">Mark Watched</a>
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 4px 0;"></div>
+        <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size: 11px; color: #9ab; text-align: center; text-decoration: none;">Not the right film? Search Letterboxd</a>
       </div>
     `;
     

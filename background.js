@@ -74,35 +74,39 @@ async function guessLetterboxdSlug(title, year) {
 
   const toSlug = (text) => {
     return text.toLowerCase()
-      .replace(/&/g, 'and')
       .replace(/['".,;:!?()[\]{}]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
   };
 
-  const baseSlug = toSlug(cleanTitle);
   const attempts = new Set();
   
-  // Try exact slug
-  attempts.add(baseSlug);
-  
-  // Try with year if we have it
+  // Variation 1: Standard slug (handles spaces/symbols as hyphens)
+  const base = toSlug(cleanTitle);
+  attempts.add(base);
+
+  // Variation 2: Replace & with 'and'
+  if (cleanTitle.includes('&')) {
+    attempts.add(toSlug(cleanTitle.replace(/&/g, 'and')));
+  }
+
+  // Add years to all current variations
   if (detectedYear) {
-    attempts.add(`${baseSlug}-${detectedYear}`);
+    const currentVars = Array.from(attempts);
+    currentVars.forEach(v => attempts.add(`${v}-${detectedYear}`));
   }
 
-  // Try both removing and adding "the-" prefix for maximum coverage
-  if (baseSlug.startsWith('the-')) {
-    const noThe = baseSlug.replace(/^the-/, '');
-    attempts.add(noThe);
-    if (detectedYear) attempts.add(`${noThe}-${detectedYear}`);
-  } else {
-    const withThe = `the-${baseSlug}`;
-    attempts.add(withThe);
-    if (detectedYear) attempts.add(`${withThe}-${detectedYear}`);
-  }
+  // Handle "The" prefix for all current variations
+  const currentVars = Array.from(attempts);
+  currentVars.forEach(v => {
+    if (v.startsWith('the-')) {
+      attempts.add(v.replace(/^the-/, ''));
+    } else {
+      attempts.add(`the-${v}`);
+    }
+  });
 
-  console.log(`[LetterMarkd] Trying slugs for "${title}":`, Array.from(attempts));
+  console.log(`[LetterMarkd] Trying ${attempts.size} variations for "${title}"`);
 
   for (const slug of attempts) {
     const url = `https://letterboxd.com/film/${slug}/`;
