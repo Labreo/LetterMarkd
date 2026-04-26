@@ -86,28 +86,33 @@ if (isStreamingSite()) {
   document.addEventListener('mouseover', (e) => {
     if (currentPanel || currentPrompt) return;
 
-    const target = e.target.closest('[aria-label]');
+    const target = e.target.closest && e.target.closest('[aria-label]');
     if (target) {
-      let label = target.getAttribute('aria-label').trim();
-      
-      // Clean streaming-specific prefixes (Play, Watch, View)
-      label = label.replace(/^(Play|Watch|View|Browse)\s+/i, '');
-      // Handle "Play Michael (2026)" -> "Michael (2026)"
+      let label = target.getAttribute('aria-label');
+      if (!label) return;
+      label = label.trim().replace(/^(Play|Watch|View|Browse)\s+/i, '');
       
       if (label && label.length > 1 && label.length < 80 && /^[a-zA-Z0-9\s:&'().,-]+$/.test(label) && !label.includes('Menu') && !label.includes('Search')) {
         const rect = target.getBoundingClientRect();
         
-        if (isEnabledOnThisSite) {
-          clearTimeout(hoverTimer);
-          hoverTimer = setTimeout(() => {
-            showBubble(rect, label, true);
-          }, 400);
-        } else if (!isPromptedOnThisSite) {
-          clearTimeout(hoverTimer);
-          hoverTimer = setTimeout(() => {
-            showPermissionPrompt(rect);
-          }, 400);
-        }
+        // Re-check permissions on every hover to stay in sync (Crucial for Firefox)
+        chrome.storage.local.get(['allowlist', 'blocklist'], (res) => {
+          const host = window.location.hostname;
+          const isEnabled = (res.allowlist || []).some(d => host.includes(d));
+          const isBlocked = (res.blocklist || []).some(d => host.includes(d));
+
+          if (isEnabled && !isBlocked) {
+            clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(() => {
+              showBubble(rect, label, true);
+            }, 400);
+          } else if (!isEnabled && !isBlocked) {
+            clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(() => {
+              showPermissionPrompt(rect);
+            }, 400);
+          }
+        });
       }
     }
   });
@@ -134,20 +139,26 @@ function handleSelection() {
     return;
   }
 
-  // Stricter word count check
-  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-  if (wordCount > maxWordCount) {
-    return;
-  }
+  // Fetch settings dynamically to ensure sync (Crucial for Firefox)
+  chrome.storage.local.get(['allowlist', 'blocklist', 'masterEnabled', 'maxWordCount'], (res) => {
+    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    const currentMax = res.maxWordCount || 12;
+    if (wordCount > currentMax) return;
 
-  const range = selection.getRangeAt(0);
-  const rect = range.getBoundingClientRect();
+    const host = window.location.hostname.replace('www.', '');
+    const master = res.masterEnabled !== false;
+    const isAllowed = (res.allowlist || []).includes(host);
+    const isBlocked = (res.blocklist || []).includes(host);
 
-  if (isEnabledOnThisSite) {
-    showBubble(rect, text);
-  } else if (!isPromptedOnThisSite) {
-    showPermissionPrompt(rect);
-  }
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    if (master && isAllowed && !isBlocked) {
+      showBubble(rect, text);
+    } else if (master && !isAllowed && !isBlocked) {
+      showPermissionPrompt(rect);
+    }
+  });
 }
 
 function showPermissionPrompt(rect) {
