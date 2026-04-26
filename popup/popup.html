@@ -196,13 +196,20 @@
       </div>
     </div>
 
-    <div class="section-title">Fade Threshold</div>
+    <div class="section-title">Fade Threshold (Pro)</div>
     <div class="slider-container">
       <div class="slider-header">
-        <span>Minimum Rating</span>
+        <span>Movies</span>
         <span id="threshold-val">2.5</span>
       </div>
       <input type="range" id="threshold-slider" min="1" max="5" step="0.1" value="2.5">
+    </div>
+    <div class="slider-container" style="margin-bottom: 8px;">
+      <div class="slider-header">
+        <span>TV Shows</span>
+        <span id="threshold-tv-val" style="color:var(--text-dim);">Pro Only</span>
+      </div>
+      <input type="range" id="threshold-tv-slider" min="1" max="5" step="0.1" value="2.5" disabled style="opacity: 0.5; cursor: not-allowed;">
     </div>
   </div>
 

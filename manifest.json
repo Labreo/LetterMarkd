@@ -11,6 +11,7 @@
     "https://*.netflix.com/*",
     "https://*.primevideo.com/*",
     "https://*.disneyplus.com/*",
+    "https://*.imdb.com/*",
     "https://www.google.com/*",
     "https://letterboxd.com/*",
     "https://api.themoviedb.org/*"
@@ -37,6 +38,18 @@
       ],
       "js": [
         "content/google.js"
+      ],
+      "css": [
+        "styles/badge.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.imdb.com/title/*"
+      ],
+      "js": [
+        "content/imdb.js"
       ],
       "css": [
         "styles/badge.css"
