@@ -46,7 +46,9 @@ async function handleFetchRating(title, year, tabId) {
     const lbResult = await guessLetterboxdSlug(title, year);
     if (!lbResult || !lbResult.url) throw new Error('Film not found');
 
-    const response = await fetch(lbResult.url);
+    const response = await fetch(lbResult.url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+    });
     const html = await response.text();
 
     const parsedData = parseRatingFromJsonLd(html);
@@ -136,7 +138,9 @@ async function guessLetterboxdSlug(title, year) {
   for (const slug of attempts) {
     const url = `https://letterboxd.com/film/${slug}/`;
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+      });
       if (res.status === 200) return { url, title: cleanTitle, year: detectedYear };
     } catch (e) {}
   }
