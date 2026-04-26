@@ -39,8 +39,15 @@ async function handleFetchRating(title, year) {
     const response = await fetch(lbResult.url);
     const html = await response.text();
 
-    const parsedData = parseRatingFromJsonLd(html);
-    console.log(`[LetterMarkd] Scraped rating: ${parsedData.rating}`);
+    let parsedData = parseRatingFromJsonLd(html);
+    
+    // Fallback to Meta Tags if JSON-LD fails
+    if (!parsedData.rating) {
+      console.log('[LetterMarkd] JSON-LD failed, trying Meta Fallback...');
+      parsedData = parseRatingFromMeta(html);
+    }
+
+    console.log(`[LetterMarkd] Final rating: ${parsedData.rating}`);
 
     const result = {
       rating: parsedData.rating,
@@ -152,5 +159,25 @@ function parseRatingFromJsonLd(html) {
     }
     return extract(data);
   } catch (e) { return { rating: null, count: null, image: null }; }
+}
+
+function parseRatingFromMeta(html) {
+  try {
+    const twitterRatingMatch = html.match(/<meta name="twitter:data2" content="([\d.]+) out of 5">/);
+    if (twitterRatingMatch) {
+      return {
+        rating: parseFloat(twitterRatingMatch[1]).toFixed(2),
+        count: null,
+        image: null
+      };
+    }
+    
+    // Last ditch: og:title might have year
+    const ogTitleMatch = html.match(/<meta property="og:title" content="(.*?) \((\d{4})\)">/);
+    if (ogTitleMatch) {
+      return { rating: null, title: ogTitleMatch[1], year: ogTitleMatch[2] };
+    }
+  } catch (e) {}
+  return { rating: null, count: null, image: null };
 }
 
