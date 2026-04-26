@@ -17,6 +17,23 @@ document.addEventListener('mousedown', (e) => {
   }
 });
 
+// Dismiss on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    clearUI();
+  }
+});
+
+function getStarString(rating) {
+  if (!rating) return '';
+  const num = parseFloat(rating);
+  const fullStars = Math.floor(num);
+  const hasHalf = (num - fullStars) >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+  
+  return '★'.repeat(fullStars) + (hasHalf ? '½' : '') + '☆'.repeat(emptyStars);
+}
+
 async function handleSelection() {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) {
@@ -62,7 +79,7 @@ function showBubble(rect, text) {
 
   currentBubble = document.createElement('div');
   currentBubble.id = 'lm-selection-bubble';
-  currentBubble.innerHTML = `<span>★</span> LB`;
+  currentBubble.innerHTML = `<span>★</span> Lettermarkd`;
   
   // Position above the center of the selection
   const top = rect.top + window.scrollY;
@@ -95,9 +112,9 @@ async function showPanel(rect, query) {
   // Display panel immediately in a loading state
   currentPanel.innerHTML = `
     <button class="lm-close">&times;</button>
-    <div class="lm-panel-header">
-      <div style="font-size:12px; color:#9ab; margin-bottom:4px;">Searching Letterboxd...</div>
-      <div class="lm-panel-title" style="color: #666;">${query}</div>
+    <div class="lm-panel-header" style="justify-content:center; align-items:center; padding: 24px;">
+      <div class="lm-spinner" style="margin-right: 12px;"></div>
+      <div style="color:#9ab; font-size:13px;">Searching Letterboxd...</div>
     </div>
   `;
 
@@ -111,28 +128,33 @@ async function showPanel(rect, query) {
     if (chrome.runtime.lastError || !data || !data.rating) {
       currentPanel.innerHTML = `
         <button class="lm-close">&times;</button>
-        <div class="lm-panel-header">
-          <div style="font-size:12px; color:#e00054; margin-bottom:4px;">Film not found</div>
-          <div class="lm-panel-title">${query}</div>
+        <div class="lm-panel-header" style="padding: 24px;">
+          <div style="color:#e00054; font-size:13px;">No film found for that title.</div>
         </div>
       `;
       currentPanel.querySelector('.lm-close').addEventListener('click', () => clearUI());
       return;
     }
 
+    const starVisual = getStarString(data.rating);
+
     currentPanel.innerHTML = `
       <button class="lm-close">&times;</button>
       <div class="lm-panel-header">
-        <a href="${data.url}" target="_blank" class="lm-panel-title">${data.title} ${data.year ? `(${data.year})` : ''}</a>
-        <div class="lm-panel-rating">
-          ★ ${data.rating}
-          ${data.count ? `<span style="font-size:11px; color:#70757a; font-weight:normal; margin-left:6px;">(${data.count} ratings)</span>` : ''}
+        ${data.image ? `<img src="${data.image}" class="lm-poster" alt="Poster">` : ''}
+        <div class="lm-panel-info">
+          <a href="${data.url}" target="_blank" class="lm-panel-title">${data.title} ${data.year ? `<span style="color:#9ab; font-weight:normal;">${data.year}</span>` : ''}</a>
+          <div class="lm-panel-rating">
+            <span style="letter-spacing: 2px;">${starVisual}</span>
+            <span style="color:#fff; margin-left:6px;">${data.rating} / 5</span>
+            ${data.count ? `<span style="font-size:11px; color:#70757a; font-weight:normal; margin-left:6px;">${data.count} ratings</span>` : ''}
+          </div>
         </div>
       </div>
       <div class="lm-panel-actions">
-        <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View</a>
-        <a href="${data.url}" target="_blank" class="lm-btn">Watched</a>
-        <a href="${data.url}" target="_blank" class="lm-btn">Watchlist</a>
+        <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a>
+        <a href="${data.url}" target="_blank" class="lm-btn">+ Watchlist</a>
+        <a href="${data.url}" target="_blank" class="lm-btn">Mark Watched</a>
       </div>
     `;
     

@@ -13,12 +13,11 @@ mkdir -p dist/chrome dist/firefox
 prepare_build() {
     local target=$1
     echo "  📦 Preparing $target..."
-    mkdir -p "$target/popup" "$target/options" "$target/icons"
+    mkdir -p "$target/popup" "$target/icons"
     
     cp content.js "$target/content.js"
     cp content.css "$target/content.css"
     cp -r popup/ "$target/popup/"
-    cp -r options/ "$target/options/"
     cp -r icons/ "$target/icons/"
     
     # Copy background.js (no injection needed anymore)

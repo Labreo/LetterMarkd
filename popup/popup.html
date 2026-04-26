@@ -8,13 +8,13 @@
     :root {
       --bg: #14181c;
       --card: #1b2228;
-      --accent: #00e054;
+      --accent: #E9C46A;
       --text: #ffffff;
       --text-dim: #9ab;
     }
 
     body {
-      width: 300px;
+      width: 240px;
       margin: 0;
       font-family: 'Inter', -apple-system, system-ui, sans-serif;
       background-color: var(--bg);
@@ -161,28 +161,33 @@
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo">Letter<span>Markd</span></div>
-    <div class="pro-badge" id="upgradeBtn">UPGRADE</div>
+  <div class="header" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+    <div style="font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+      <span style="color: #E9C46A;">★</span> Lettermarkd
+    </div>
+    <div style="font-size: 12px; color: #9ab;">Letterboxd on every page</div>
   </div>
 
   <div class="content">
-    <div style="font-size:13px; color:var(--text-dim); margin-bottom:20px; line-height:1.5;">
-      <strong>How to use:</strong> Highlight any movie title on any webpage. Click the bubble that appears to view its Letterboxd rating and actions.
+    <div style="font-size:13px; color:#fff; margin-bottom:16px; line-height:1.5;">
+      <ol style="padding-left: 20px; margin: 0; color: #9ab;">
+        <li style="margin-bottom: 6px;">Highlight a film title on any webpage.</li>
+        <li style="margin-bottom: 6px;">Click the <span style="color:#fff;">★ Lettermarkd</span> bubble.</li>
+        <li>See ratings and log films instantly.</li>
+      </ol>
     </div>
 
-    <div class="section-title">Settings</div>
-    <div class="toggle-group">
+    <div class="toggle-group" style="margin-top: 20px;">
       <div class="toggle-item">
-        <span>Enable LetterMarkd</span>
+        <span style="font-weight: 600; color: #fff;">Enable Lettermarkd</span>
         <label class="switch"><input type="checkbox" id="toggle-master" checked><span class="slider-round"></span></label>
       </div>
     </div>
   </div>
 
   <div class="footer">
-    <a href="#" id="openOptions">About</a>
-    <span style="color:var(--text-dim)">v0.1.0</span>
+    <a href="https://letterboxd.com" target="_blank" style="color: #E9C46A; text-decoration: none; font-weight: bold;">Letterboxd.com</a>
+    <span style="color:var(--text-dim)">v1.0.0</span>
   </div>
 
   <script src="popup.js"></script>

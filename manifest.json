@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LetterMarkd",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Letterboxd ratings and actions overlaid on any movie-related webpage.",
   "permissions": [
     "storage"

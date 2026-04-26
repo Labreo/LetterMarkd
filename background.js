@@ -45,6 +45,7 @@ async function handleFetchRating(title, year) {
     const result = {
       rating: parsedData.rating,
       count: parsedData.count,
+      image: parsedData.image,
       url: response.url,
       title: lbResult.title || title,
       year: lbResult.year || year,
@@ -100,20 +101,22 @@ function parseRatingFromJsonLd(html) {
     const data = JSON.parse(ldJsonMatch[1]);
     
     const extract = (obj) => {
-      if (!obj.aggregateRating) return { rating: null, count: null };
+      if (!obj.aggregateRating) return { rating: null, count: null, image: null };
       const val = obj.aggregateRating.ratingValue;
       const count = obj.aggregateRating.ratingCount;
+      const imageObj = obj.image ? (Array.isArray(obj.image) ? obj.image[0] : obj.image) : null;
       return {
         rating: (val && !isNaN(parseFloat(val))) ? parseFloat(val).toFixed(2) : null,
-        count: count ? count.toLocaleString() : null
+        count: count ? count.toLocaleString() : null,
+        image: typeof imageObj === 'string' ? imageObj : (imageObj?.url || null)
       };
     };
 
     if (Array.isArray(data)) {
       const film = data.find(i => i['@type'] === 'Movie');
-      return film ? extract(film) : { rating: null, count: null };
+      return film ? extract(film) : { rating: null, count: null, image: null };
     }
     return extract(data);
-  } catch (e) { return { rating: null, count: null }; }
+  } catch (e) { return { rating: null, count: null, image: null }; }
 }
 
