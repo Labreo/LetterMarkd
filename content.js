@@ -4,16 +4,14 @@ let currentPanel = null;
 let currentPrompt = null;
 let debounceTimer = null;
 
-let allowlist = [];
-let blocklist = [];
-let isEnabledOnThisSite = false;
-let isPromptedOnThisSite = false;
+let maxWordCount = 7;
 
 // Load settings
 function loadSettings() {
-  chrome.storage.local.get(['allowlist', 'blocklist', 'masterEnabled'], (result) => {
+  chrome.storage.local.get(['allowlist', 'blocklist', 'masterEnabled', 'maxWordCount'], (result) => {
     allowlist = result.allowlist || [];
     blocklist = result.blocklist || [];
+    maxWordCount = result.maxWordCount || 7;
     const master = result.masterEnabled !== false;
     const host = window.location.hostname.replace('www.', '');
     
@@ -35,7 +33,6 @@ loadSettings();
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'SETTINGS_UPDATED') loadSettings();
   if (msg.type === 'EXTRA_STATS_READY' && currentPanel) {
-    // Only re-render if we are looking at the same movie
     renderFullPanel(msg.data, msg.data.title);
   }
 });
@@ -72,6 +69,12 @@ function handleSelection() {
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
 
+  // Check word count limit
+  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+  if (wordCount > maxWordCount) {
+    return;
+  }
+
   if (isEnabledOnThisSite) {
     showBubble(rect, text);
   } else if (!isPromptedOnThisSite) {
@@ -91,10 +94,10 @@ function showPermissionPrompt(rect) {
   currentPrompt.style.left = `${Math.max(10, left - 110)}px`;
 
   currentPrompt.innerHTML = `
-    <div>Enable LetterMarkd on this site?</div>
+    <div style="margin-bottom:12px;">Enable LetterMarkd on this site?</div>
     <div class="lm-prompt-btns">
       <button id="lm-prompt-yes" class="lm-btn lm-btn-primary lm-btn-small">Enable</button>
-      <button id="lm-prompt-no" class="lm-btn lm-btn-small">Hide</button>
+      <button id="lm-prompt-no" class="lm-btn lm-btn-small" style="background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1);">Hide</button>
     </div>
   `;
   document.body.appendChild(currentPrompt);
@@ -138,9 +141,9 @@ function showBubble(rect, text) {
   const left = rect.left + window.scrollX + (rect.width / 2);
   currentBubble.style.top = `${top}px`;
   currentBubble.style.left = `${left}px`;
-  currentBubble.className = 'lm-pos-bottom';
+  currentBubble.style.transform = 'translateX(-50%)';
 
-  currentBubble.innerHTML = `<span style="color:#E9C46A;">★</span> LetterMarkd`;
+  currentBubble.innerHTML = `<span style="color:#E9C46A; font-size:16px;">★</span> LetterMarkd`;
   document.body.appendChild(currentBubble);
 
   currentBubble.onclick = (e) => {
@@ -159,24 +162,22 @@ function showPanel(rect, query) {
   
   currentPanel.style.top = `${top}px`;
   currentPanel.style.left = `${left}px`;
-  currentPanel.style.transform = 'none';
 
-  currentPanel.innerHTML = `<button class="lm-close">&times;</button><div class="lm-panel-header" style="padding:20px;justify-content:center;"><div class="lm-spinner"></div></div>`;
+  currentPanel.innerHTML = `<button class="lm-close">&times;</button><div class="lm-panel-header" style="padding:40px;justify-content:center;"><div class="lm-spinner"></div></div>`;
   document.body.appendChild(currentPanel);
 
   chrome.runtime.sendMessage({ type: 'SEARCH_FILM', query: query }, (data) => {
     if (chrome.runtime.lastError || !data || !data.rating) {
       currentPanel.innerHTML = `
         <button class="lm-close">&times;</button>
-        <div class="lm-panel-header" style="padding:20px; flex-direction:column; align-items:center; text-align:center;">
-          <div style="margin-bottom:15px; color:#9ab;">No direct match found for "${query}"</div>
-          <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" class="lm-btn lm-btn-primary" style="text-decoration:none;">Search on Letterboxd</a>
+        <div class="lm-panel-header" style="padding:30px; flex-direction:column; align-items:center; text-align:center;">
+          <div style="margin-bottom:20px; color:#9ab; font-size:14px;">No direct match found for "${query}"</div>
+          <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" class="lm-btn lm-btn-primary" style="text-decoration:none; padding: 10px 20px;">Search on Letterboxd</a>
         </div>
       `;
       currentPanel.querySelector('.lm-close').onclick = clearUI;
       return;
     }
-
     renderFullPanel(data, query);
   });
 }
@@ -184,21 +185,38 @@ function showPanel(rect, query) {
 function renderFullPanel(data, query) {
   if (!currentPanel) return;
   const stars = getStarString(data.rating);
-  
-  // Preserve active tab if we are re-rendering
   const activeTab = currentPanel.querySelector('.lm-tab.lm-active')?.getAttribute('data-tab') || 'info';
+
+  const logoSvg = `
+    <svg class="lm-header-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#00e054" />
+          <stop offset="100%" style="stop-color:#40bcf4" />
+        </linearGradient>
+      </defs>
+      <rect width="100" height="100" rx="20" fill="#12161b" />
+      <path d="M35 25 V75 H65" stroke="url(#logo-grad)" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  `;
 
   currentPanel.innerHTML = `
     <button class="lm-close">&times;</button>
     <div class="lm-panel-header">
       ${data.image ? `<img src="${data.image}" class="lm-poster">` : ''}
       <div class="lm-panel-info">
-        <div class="lm-panel-title">${data.title} <span style="color:#9ab;font-weight:normal;">${data.year || ''}</span></div>
-        <div class="lm-panel-rating">
-          <span style="letter-spacing:2px;">${stars}</span>
-          <span style="color:#fff;margin-left:6px;">${data.rating}</span>
+        <div class="lm-panel-title">
+          ${logoSvg}
+          <span style="flex:1;">${data.title}</span>
         </div>
-        <div style="font-size:11px;color:#70757a;margin-top:4px;">${data.ratingCount || ''} ratings &bull; ${data.reviewCount || ''} reviews</div>
+        <div style="font-size:12px; color:var(--text-dim); margin-bottom:8px; margin-left:34px;">${data.year || ''}</div>
+        <div class="lm-panel-rating" style="margin-left:34px;">
+          <span class="lm-stars">${stars}</span>
+          <span style="color:#fff;">${data.rating}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px; font-weight:500; margin-left:34px;">
+          ${data.ratingCount || '0'} ratings &bull; ${data.reviewCount || '0'} reviews
+        </div>
       </div>
     </div>
     <div class="lm-panel-tabs">
@@ -208,19 +226,23 @@ function renderFullPanel(data, query) {
     <div class="lm-panel-body">
       <div id="lm-tab-info" class="lm-tab-content" style="display: ${activeTab === 'info' ? 'block' : 'none'};">
         <div class="lm-info-list">
-          <div class="lm-info-item"><strong>Director:</strong> ${data.director || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Cast:</strong> ${data.cast || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Genres:</strong> ${data.genres?.join(', ') || 'N/A'}</div>
-          <div class="lm-info-item" style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 12px; padding-top: 12px;">
-            <strong>IMDb Rating:</strong> <span style="color:var(--accent); font-weight: bold;">★ ${data.extraStats?.imdbRating || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span>
+          <div class="lm-info-item"><strong>Director</strong> ${data.director || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Cast</strong> ${data.cast || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Genres</strong> ${(data.genres || []).join(', ')}</div>
+          
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-glass);">
+            <div class="lm-info-item" style="margin-bottom:8px;">
+              <strong>IMDb Rating</strong> 
+              <span style="color:var(--accent); font-weight:700;">★ ${data.extraStats?.imdbRating || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span>
+            </div>
+            <div class="lm-info-item"><strong>Box Office</strong> <span style="color:#fff;">${data.extraStats?.boxOffice || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span></div>
+            <div class="lm-info-item"><strong>Budget</strong> <span style="color:#fff;">${data.extraStats?.budget || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span></div>
           </div>
-          <div class="lm-info-item"><strong>Box Office:</strong> <span style="color: #fff;">${data.extraStats?.boxOffice || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span></div>
-          <div class="lm-info-item"><strong>Budget:</strong> <span style="color: #fff;">${data.extraStats?.budget || (data.extraStats?.loading ? 'Loading...' : 'N/A')}</span></div>
         </div>
         
         ${data.watchProviders?.length ? `
-          <div class="lm-where-watch" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
-            <div style="font-size: 11px; color: #9ab; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">Where to Watch</div>
+          <div class="lm-where-watch" style="margin-top: 16px; border-top: 1px solid var(--border-glass); padding-top: 15px;">
+            <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Where to Watch</div>
             <div class="lm-watch-list">
               ${data.watchProviders.map(p => `<span class="lm-watch-item">${p}</span>`).join('')}
             </div>
@@ -230,16 +252,24 @@ function renderFullPanel(data, query) {
       <div id="lm-tab-reviews" class="lm-tab-content" style="display: ${activeTab === 'reviews' ? 'block' : 'none'};">
         ${(data.reviews || []).map((r, i) => `
           <div class="lm-review-card">
-            <div class="lm-review-author"><span>${r.author}</span><span style="color:#E9C46A;">${r.rating || ''}</span></div>
-            ${r.isSpoiler ? `<div class="lm-spoiler-warning" id="lm-s-${i}">Spoiler! <span class="lm-reveal-link" data-r="lm-t-${i}" data-w="lm-s-${i}">Show</span></div><div class="lm-review-text" id="lm-t-${i}" style="display:none;">${r.text}</div>` : `<div class="lm-review-text">${r.text}</div>`}
+            <div class="lm-review-author">
+              <span style="color:var(--text-dim)">${r.author}</span>
+              <span style="color:var(--accent)">${r.rating || ''}</span>
+            </div>
+            ${r.isSpoiler ? `
+              <div class="lm-spoiler-warning" id="lm-s-${i}">
+                Contains Spoilers <span class="lm-reveal-link" data-r="lm-t-${i}" data-w="lm-s-${i}">Reveal</span>
+              </div>
+              <div class="lm-review-text" id="lm-t-${i}" style="display:none;">${r.text}</div>
+            ` : `<div class="lm-review-text">${r.text}</div>`}
           </div>
-        `).join('') || '<div style="text-align:center;padding:20px;color:#70757a;">No reviews yet.</div>'}
+        `).join('') || '<div style="text-align:center;padding:40px;color:var(--text-muted); font-size:13px;">No community reviews found.</div>'}
       </div>
     </div>
     <div class="lm-panel-actions">
       <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a>
-      <div style="margin-top:12px; text-align:center;">
-        <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size:10px; color:#70757a; text-decoration:none; cursor:pointer;" onmouseover="this.style.color='#9ab'" onmouseout="this.style.color='#70757a'">Not the right movie? Search Letterboxd</a>
+      <div style="margin-top:14px; text-align:center;">
+        <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size:10px; color:var(--text-muted); text-decoration:none; font-weight:500;" onmouseover="this.style.color='var(--text-dim)'" onmouseout="this.style.color='var(--text-muted)'">Not the right movie? Search Letterboxd</a>
       </div>
     </div>
   `;
@@ -265,5 +295,5 @@ function getStarString(rating) {
   const num = parseFloat(rating);
   const full = Math.floor(num);
   const half = num % 1 >= 0.5 ? 1 : 0;
-  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - half);
+  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(Math.max(0, 5 - full - half));
 }
