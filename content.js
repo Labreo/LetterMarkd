@@ -88,8 +88,13 @@ if (isStreamingSite()) {
 
     const target = e.target.closest('[aria-label]');
     if (target) {
-      const label = target.getAttribute('aria-label');
-      if (label && label.length > 1 && label.length < 80 && !label.includes('Menu') && !label.includes('Search')) {
+      let label = target.getAttribute('aria-label').trim();
+      
+      // Clean streaming-specific prefixes (Play, Watch, View)
+      label = label.replace(/^(Play|Watch|View|Browse)\s+/i, '');
+      // Handle "Play Michael (2026)" -> "Michael (2026)"
+      
+      if (label && label.length > 1 && label.length < 80 && /^[a-zA-Z0-9\s:&'().,-]+$/.test(label) && !label.includes('Menu') && !label.includes('Search')) {
         const rect = target.getBoundingClientRect();
         
         if (isEnabledOnThisSite) {

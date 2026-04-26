@@ -12,7 +12,7 @@ const DEFAULT_ALLOWLIST = [
 chrome.runtime.onInstalled.addListener(() => {
   // Clear old version caches (v1 to v11)
   chrome.storage.local.get(null, (items) => {
-    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v13'));
+    const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v14'));
     if (keysToRemove.length > 0) {
       chrome.storage.local.remove(keysToRemove);
       console.log(`[LetterMarkd] Cleared ${keysToRemove.length} old cache entries.`);
@@ -35,7 +35,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function handleFetchRating(title, year, tabId) {
-  const cacheKey = `film_v13_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
+  const cacheKey = `film_v14_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
   const cached = await chrome.storage.local.get(cacheKey);
   
   if (cached[cacheKey] && (Date.now() - cached[cacheKey].timestamp < CACHE_TTL)) {
@@ -114,7 +114,11 @@ async function guessLetterboxdSlug(title, year) {
     cleanTitle = title.replace(yearMatch[0], '').trim();
   }
 
-  const toSlug = (text) => text.toLowerCase().replace(/['".,;:!?()[\]{}]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const toSlug = (text) => text.toLowerCase()
+    .replace(/['".,;:!?()[\]{}]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+    
   const attempts = new Set();
   const base = toSlug(cleanTitle);
   attempts.add(base);
