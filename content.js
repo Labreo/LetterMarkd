@@ -59,10 +59,12 @@ loadSettings();
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'SETTINGS_UPDATED') loadSettings();
   if (msg.type === 'EXTRA_STATS_READY' && currentPanel) {
-    // Only re-render if we are looking at the same movie
     renderFullPanel(msg.data, msg.data.title);
   }
 });
+
+// Real-time settings sync
+chrome.storage.onChanged.addListener(() => loadSettings());
 
 document.addEventListener('selectionchange', () => {
   clearTimeout(debounceTimer);
