@@ -1,9 +1,22 @@
 // LetterMarkd Universal Text Selection Script
+const DEFAULT_OPTIONS = {
+  maxWordCount: 27,
+  panelTheme: 'dark',
+  showExtraStats: true
+};
+
 let currentBubble = null;
 let currentPanel = null;
 let currentPrompt = null;
 let debounceTimer = null;
+let options = { ...DEFAULT_OPTIONS };
 
+function escapeHTML(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 
 let allowlist = [];
 let blocklist = [];
@@ -196,7 +209,7 @@ function showPanel(rect, query) {
       currentPanel.innerHTML = `
         <button class="lm-close">&times;</button>
         <div class="lm-panel-header" style="padding:30px; flex-direction:column; align-items:center; text-align:center;">
-          <div style="margin-bottom:20px; color:#9ab; font-size:14px;">No direct match found for "${query}"</div>
+          <div style="margin-bottom:20px; color:#9ab; font-size:14px;">No direct match found for "${escapeHTML(query)}"</div>
           <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" class="lm-btn lm-btn-primary" style="text-decoration:none; padding: 10px 20px;">Search on Letterboxd</a>
         </div>
       `;
@@ -235,19 +248,19 @@ function renderFullPanel(data, query) {
   currentPanel.innerHTML = `
     <button class="lm-close">&times;</button>
     <div class="lm-panel-header">
-      ${data.image ? `<img src="${data.image}" class="lm-poster">` : ''}
+      ${data.image ? `<img src="${escapeHTML(data.image)}" class="lm-poster">` : ''}
       <div class="lm-panel-info">
         <div class="lm-panel-title">
           ${logoSvg}
-          <span style="flex:1;">${data.title}</span>
+          <span style="flex:1;">${escapeHTML(data.title)}</span>
         </div>
-        <div style="font-size:12px; color:var(--text-dim); margin-bottom:8px; margin-left:34px;">${data.year || ''}</div>
+        <div style="font-size:12px; color:var(--text-dim); margin-bottom:8px; margin-left:34px;">${escapeHTML(data.year) || ''}</div>
         <div class="lm-panel-rating" style="margin-left:34px;">
           <span class="lm-stars">${stars}</span>
-          <span style="color:#fff;">${data.rating}</span>
+          <span style="color:#fff;">${escapeHTML(data.rating)}</span>
         </div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:6px; font-weight:500; margin-left:34px;">
-          ${data.ratingCount || '0'} ratings &bull; ${data.reviewCount || '0'} reviews
+          ${escapeHTML(data.ratingCount) || '0'} ratings &bull; ${escapeHTML(data.reviewCount) || '0'} reviews
         </div>
       </div>
     </div>
@@ -260,8 +273,8 @@ function renderFullPanel(data, query) {
       <div id="lm-tab-info" class="lm-tab-content" style="display: ${activeTab === 'info' ? 'block' : 'none'};">
         <div class="lm-info-list">
           <div class="lm-info-item" style="margin-bottom: 12px; line-height: 1.5; color: #fff;">
-            ${data.tagline ? `<div style="font-style: italic; color: var(--accent); margin-bottom: 8px;">"${data.tagline}"</div>` : ''}
-            ${data.description || 'No description available.'}
+            ${data.tagline ? `<div style="font-style: italic; color: var(--accent); margin-bottom: 8px;">"${escapeHTML(data.tagline)}"</div>` : ''}
+            ${escapeHTML(data.description) || 'No description available.'}
           </div>
           
           ${hasExtraStats ? `
@@ -269,20 +282,20 @@ function renderFullPanel(data, query) {
             ${data.extraStats.imdbRating ? `
             <div class="lm-info-item" style="margin-bottom:8px;">
               <strong>IMDb Rating</strong> 
-              <span style="color:var(--accent); font-weight:700;">★ ${data.extraStats.imdbRating}</span>
+              <span style="color:var(--accent); font-weight:700;">★ ${escapeHTML(data.extraStats.imdbRating)}</span>
             </div>` : ''}
-            ${data.extraStats.boxOffice ? `<div class="lm-info-item"><strong>Box Office</strong> <span style="color:#fff;">${data.extraStats.boxOffice}</span></div>` : ''}
-            ${data.extraStats.budget ? `<div class="lm-info-item"><strong>Budget</strong> <span style="color:#fff;">${data.extraStats.budget}</span></div>` : ''}
+            ${data.extraStats.boxOffice ? `<div class="lm-info-item"><strong>Box Office</strong> <span style="color:#fff;">${escapeHTML(data.extraStats.boxOffice)}</span></div>` : ''}
+            ${data.extraStats.budget ? `<div class="lm-info-item"><strong>Budget</strong> <span style="color:#fff;">${escapeHTML(data.extraStats.budget)}</span></div>` : ''}
           </div>` : ''}
         </div>
       </div>
 
       <div id="lm-tab-details" class="lm-tab-content" style="display: ${activeTab === 'details' ? 'block' : 'none'};">
         <div class="lm-info-list">
-          <div class="lm-info-item"><strong>Director</strong> ${data.director || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Cast</strong> ${data.cast || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Genres</strong> ${(data.genres || []).join(', ') || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Release</strong> ${formatDate(data.year) || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Director</strong> ${escapeHTML(data.director) || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Cast</strong> ${escapeHTML(data.cast) || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Genres</strong> ${escapeHTML((data.genres || []).join(', ')) || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Release</strong> ${escapeHTML(formatDate(data.year)) || 'N/A'}</div>
         </div>
       </div>
 
@@ -290,15 +303,15 @@ function renderFullPanel(data, query) {
         ${(data.reviews || []).map((r, i) => `
           <div class="lm-review-card">
             <div class="lm-review-author">
-              <span style="color:var(--text-dim)">${r.author}</span>
-              <span style="color:var(--accent)">${r.rating || ''}</span>
+              <span style="color:var(--text-dim)">${escapeHTML(r.author)}</span>
+              <span style="color:var(--accent)">${escapeHTML(r.rating) || ''}</span>
             </div>
             ${r.isSpoiler ? `
               <div class="lm-spoiler-warning" id="lm-s-${i}">
                 Contains Spoilers <span class="lm-reveal-link" data-r="lm-t-${i}" data-w="lm-s-${i}">Reveal</span>
               </div>
-              <div class="lm-review-text" id="lm-t-${i}" style="display:none;">${r.text}</div>
-            ` : `<div class="lm-review-text">${r.text}</div>`}
+              <div class="lm-review-text" id="lm-t-${i}" style="display:none;">${escapeHTML(r.text)}</div>
+            ` : `<div class="lm-review-text">${escapeHTML(r.text)}</div>`}
           </div>
         `).join('') || '<div style="text-align:center;padding:40px;color:var(--text-muted); font-size:13px;">No community reviews found.</div>'}
       </div>
