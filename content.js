@@ -7,7 +7,6 @@ const DEFAULT_OPTIONS = {
 
 let currentBubble = null;
 let currentPanel = null;
-let currentPrompt = null;
 let debounceTimer = null;
 let options = { ...DEFAULT_OPTIONS };
 
@@ -44,8 +43,6 @@ function safeSet(container, html, textMap = {}, attrMap = {}) {
 
 let allowlist = [];
 let blocklist = [];
-let isEnabledOnThisSite = false;
-let isPromptedOnThisSite = false;
 let maxWordCount = 27;
 
 // Load settings
@@ -54,19 +51,6 @@ function loadSettings() {
     allowlist = result.allowlist || [];
     blocklist = result.blocklist || [];
     maxWordCount = result.maxWordCount || 27;
-    const master = result.masterEnabled !== false;
-    const host = window.location.hostname.replace('www.', '');
-    
-    if (!master || blocklist.includes(host)) {
-      isEnabledOnThisSite = false;
-      isPromptedOnThisSite = true;
-    } else if (allowlist.includes(host)) {
-      isEnabledOnThisSite = true;
-      isPromptedOnThisSite = true;
-    } else {
-      isEnabledOnThisSite = false;
-      isPromptedOnThisSite = false;
-    }
   });
 }
 
@@ -88,7 +72,6 @@ document.addEventListener('selectionchange', () => {
 document.addEventListener('mousedown', (e) => {
   if (currentBubble && !currentBubble.contains(e.target)) clearUI();
   if (currentPanel && !currentPanel.contains(e.target)) clearUI();
-  if (currentPrompt && !currentPrompt.contains(e.target)) clearUI();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -98,8 +81,6 @@ document.addEventListener('keydown', (e) => {
 function clearUI() {
   if (currentBubble) { currentBubble.remove(); currentBubble = null; }
   if (currentPanel) { currentPanel.remove(); currentPanel = null; }
-  if (currentPrompt) { currentPrompt.remove(); currentPrompt = null; }
-
 }
 
 
@@ -129,61 +110,11 @@ function handleSelection() {
 
     if (master && isAllowed && !isBlocked) {
       showBubble(rect, text);
-    } else if (master && !isAllowed && !isBlocked) {
-      showPermissionPrompt(rect);
     }
   });
 }
 
-function showPermissionPrompt(rect) {
-  if (currentPrompt) return;
-  
-  currentPrompt = document.createElement('div');
-  currentPrompt.id = 'lm-permission-prompt';
-  
-  const top = rect.bottom + window.scrollY + 10;
-  const left = rect.left + window.scrollX + (rect.width / 2);
-  currentPrompt.style.top = `${top}px`;
-  currentPrompt.style.left = `${Math.max(10, left - 110)}px`;
 
-  safeSet(currentPrompt, `
-    <div style="margin-bottom:12px;">Enable LetterMarkd on this site?</div>
-    <div class="lm-prompt-btns">
-      <button id="lm-prompt-yes" class="lm-btn lm-btn-primary lm-btn-small">Enable</button>
-      <button id="lm-prompt-no" class="lm-btn lm-btn-small" style="background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1);">Hide</button>
-    </div>
-  `);
-  document.body.appendChild(currentPrompt);
-
-  document.getElementById('lm-prompt-yes').onclick = () => {
-    updateSitePermission(true);
-    clearUI();
-  };
-  document.getElementById('lm-prompt-no').onclick = () => {
-    updateSitePermission(false);
-    clearUI();
-  };
-}
-
-function updateSitePermission(enable) {
-  const host = window.location.hostname.replace('www.', '');
-  chrome.storage.local.get(['allowlist', 'blocklist'], (result) => {
-    let listA = result.allowlist || [];
-    let listB = result.blocklist || [];
-    
-    if (enable) {
-      if (!listA.includes(host)) listA.push(host);
-      listB = listB.filter(h => h !== host);
-      isEnabledOnThisSite = true;
-    } else {
-      if (!listB.includes(host)) listB.push(host);
-      listA = listA.filter(h => h !== host);
-      isEnabledOnThisSite = false;
-    }
-    isPromptedOnThisSite = true;
-    chrome.storage.local.set({ allowlist: listA, blocklist: listB });
-  });
-}
 
 function showBubble(rect, text) {
   if (currentBubble || currentPanel) return;
@@ -309,6 +240,10 @@ function renderFullPanel(data, query) {
             <div class="lm-boxoffice-row lm-info-item" style="display:none;"><strong>Box Office</strong> <span class="lm-box-office-val" style="color:#fff;"></span></div>
             <div class="lm-budget-row lm-info-item" style="display:none;"><strong>Budget</strong> <span class="lm-budget-val" style="color:#fff;"></span></div>
           </div>
+          <div class="lm-watch-box" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-glass); display:none;">
+            <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.05em;">Where to Watch</div>
+            <div class="lm-watch-list"></div>
+          </div>
         </div>
       </div>
       <div id="lm-tab-details" class="lm-tab-content" style="display:none;">
@@ -368,6 +303,30 @@ function renderFullPanel(data, query) {
     if (data.extraStats.budget) {
       currentPanel.querySelector('.lm-budget-row').style.display = 'block';
       currentPanel.querySelector('.lm-budget-val').textContent = data.extraStats.budget;
+    }
+  }
+  
+  if (data.watchProviders && data.watchProviders.length > 0) {
+    currentPanel.querySelector('.lm-watch-box').style.display = 'block';
+    const list = currentPanel.querySelector('.lm-watch-list');
+    data.watchProviders.forEach(p => {
+      const item = document.createElement('a');
+      item.className = 'lm-watch-item';
+      item.href = p.url;
+      item.target = '_blank';
+      item.textContent = p.name;
+      item.title = `Watch on ${p.name}`;
+      list.appendChild(item);
+    });
+
+    if (data.justWatchUrl) {
+      const jwLink = document.createElement('a');
+      jwLink.className = 'lm-jw-attribution';
+      jwLink.href = data.justWatchUrl;
+      jwLink.target = '_blank';
+      jwLink.style.cssText = 'display:block; margin-top:10px; font-size:10px; color:var(--text-muted); text-decoration:none; font-style:italic;';
+      jwLink.textContent = 'Powered by JustWatch ↗';
+      currentPanel.querySelector('.lm-watch-box').appendChild(jwLink);
     }
   }
 

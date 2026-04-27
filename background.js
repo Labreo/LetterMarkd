@@ -89,6 +89,10 @@ async function handleFetchRating(title, year, tabId) {
     const reviews = parseReviews(html);
     let watchProviders = parseWatchProviders(html);
     
+    // Extract JustWatch URL from attribution link
+    const jwMatch = html.match(/href="(https:\/\/www\.justwatch\.com\/[^"]+)"/i);
+    let justWatchUrl = jwMatch ? jwMatch[1] : null;
+
     // Stage 2: CSI Fetch for dynamic watch data if main page had none
     if (watchProviders.length === 0) {
       try {
@@ -97,6 +101,11 @@ async function handleFetchRating(title, year, tabId) {
         const csiRes = await fetch(csiUrl);
         const csiHtml = await csiRes.text();
         watchProviders = parseWatchProviders(csiHtml);
+        
+        if (!justWatchUrl) {
+          const csiJwMatch = csiHtml.match(/href="(https:\/\/www\.justwatch\.com\/[^"]+)"/i);
+          if (csiJwMatch) justWatchUrl = csiJwMatch[1];
+        }
       } catch (e) {}
     }
 
@@ -105,6 +114,7 @@ async function handleFetchRating(title, year, tabId) {
       ...parsedData, 
       reviews, 
       watchProviders, 
+      justWatchUrl,
       extraStats: { loading: true }, 
       url: lbResult.url, 
       title: lbResult.title, 
@@ -371,31 +381,43 @@ async function fetchWithTimeout(url, timeout = 3000, options = {}) {
 }
 
 function parseWatchProviders(html) {
-  const providers = new Set();
+  const providers = [];
+  const seen = new Set();
   try {
-    // Stage 1: Already handled in handleFetchRating for main page, 
-    // but this function is also called for CSI.
+    // 1. Look for anchor tags with data-track-action (most reliable for names + URLs)
+    const matches = html.match(/<a[^>]+href="([^"]+)"[^>]+data-track-action="([^"]+)"/g) || [];
     
-    // Look for standard title attributes (Stream/Rent/Buy)
-    const titleMatches = html.match(/title="[^"]*(Stream|Rent|Buy) from ([^"]+)"/g) || [];
-    titleMatches.forEach(m => {
-      const match = m.match(/from (.*?)"/);
-      if (match) providers.add(match[1].replace(/ on .*/, '').trim());
+    matches.forEach(m => {
+      const hrefMatch = m.match(/href="([^"]+)"/);
+      const nameMatch = m.match(/data-track-action="([^"]+)"/);
+      
+      if (hrefMatch && nameMatch) {
+        const url = hrefMatch[1];
+        const name = nameMatch[1];
+        
+        // Exclude generic categories and metadata sites
+        const blacklist = ['Buy', 'Rent', 'Stream', 'All', 'IMDb', 'TMDb', 'Trailer'];
+        if (!blacklist.includes(name) && !seen.has(name)) {
+          seen.add(name);
+          providers.push({
+            name: name,
+            url: url.startsWith('http') ? url : `https://letterboxd.com${url}`
+          });
+        }
+      }
     });
 
-    // Look for data-track attributes
-    const trackMatches = html.match(/data-track-action="([^"]+)"/g) || [];
-    trackMatches.forEach(m => {
-      const name = m.match(/"([^"]+)"/)[1];
-      if (!['Buy', 'Rent', 'Stream', 'All'].includes(name)) providers.add(name);
-    });
-
-    // Look for Alt tags in watch images
-    const altMatches = html.match(/alt="Watch (.*?) on/g) || [];
-    altMatches.forEach(m => {
-      const match = m.match(/Watch (.*?) on/);
-      if (match) providers.add(match[1].trim());
-    });
+    // 2. Fallback for names if the above fails
+    if (providers.length === 0) {
+      const altMatches = html.match(/alt="Watch (.*?) on/g) || [];
+      altMatches.forEach(m => {
+        const name = m.match(/Watch (.*?) on/)[1].trim();
+        if (!seen.has(name)) {
+          seen.add(name);
+          providers.push({ name, url: '#' });
+        }
+      });
+    }
   } catch (e) {}
-  return Array.from(providers).slice(0, 5);
+  return providers.slice(0, 5);
 }

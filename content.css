@@ -251,6 +251,20 @@
   font-size: 11px;
   font-weight: 500;
   color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lm-watch-item:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.lm-jw-attribution:hover {
+  color: #fbc02d !important;
+  text-decoration: underline !important;
 }
 
 /* Actions Footer */
