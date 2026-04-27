@@ -16,13 +16,15 @@ let options = { ...DEFAULT_OPTIONS };
  * and populating dynamic fields via textContent to satisfy strict security validators.
  */
 function safeSet(container, html, textMap = {}, attrMap = {}) {
-  container.innerHTML = html;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  
   for (const [selector, text] of Object.entries(textMap)) {
-    const els = container.querySelectorAll(selector);
+    const els = doc.querySelectorAll(selector);
     els.forEach(el => { el.textContent = text; });
   }
   for (const [selector, attrs] of Object.entries(attrMap)) {
-    const els = container.querySelectorAll(selector);
+    const els = doc.querySelectorAll(selector);
     els.forEach(el => {
       for (const [attr, val] of Object.entries(attrs)) {
         if (attr === 'src' || attr === 'href') {
@@ -36,6 +38,8 @@ function safeSet(container, html, textMap = {}, attrMap = {}) {
       }
     });
   }
+  
+  container.replaceChildren(...doc.body.childNodes);
 }
 
 let allowlist = [];
@@ -142,13 +146,13 @@ function showPermissionPrompt(rect) {
   currentPrompt.style.top = `${top}px`;
   currentPrompt.style.left = `${Math.max(10, left - 110)}px`;
 
-  currentPrompt.innerHTML = `
+  safeSet(currentPrompt, `
     <div style="margin-bottom:12px;">Enable LetterMarkd on this site?</div>
     <div class="lm-prompt-btns">
       <button id="lm-prompt-yes" class="lm-btn lm-btn-primary lm-btn-small">Enable</button>
       <button id="lm-prompt-no" class="lm-btn lm-btn-small" style="background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1);">Hide</button>
     </div>
-  `;
+  `);
   document.body.appendChild(currentPrompt);
 
   document.getElementById('lm-prompt-yes').onclick = () => {
@@ -192,7 +196,7 @@ function showBubble(rect, text) {
   currentBubble.style.left = `${left}px`;
   currentBubble.style.transform = 'translateX(-50%)';
 
-  currentBubble.innerHTML = `<span style="color:#E9C46A; font-size:16px;">★</span> LetterMarkd`;
+  safeSet(currentBubble, `<span style="color:#E9C46A; font-size:16px;">★</span> LetterMarkd`);
   document.body.appendChild(currentBubble);
 
   currentBubble.onclick = (e) => {
@@ -212,7 +216,7 @@ function showPanel(rect, query) {
   currentPanel.style.top = `${top}px`;
   currentPanel.style.left = `${left}px`;
 
-  currentPanel.innerHTML = `<button class="lm-close">&times;</button><div class="lm-panel-header" style="padding:40px;justify-content:center;"><div class="lm-spinner"></div></div>`;
+  safeSet(currentPanel, `<button class="lm-close">&times;</button><div class="lm-panel-header" style="padding:40px;justify-content:center;"><div class="lm-spinner"></div></div>`);
   document.body.appendChild(currentPanel);
 
   // Smart parsing: Extract title and year if present like "Movie Title (2024)"
@@ -267,7 +271,8 @@ function renderFullPanel(data, query) {
                         (data.extraStats.imdbRating || data.extraStats.boxOffice || data.extraStats.budget);
 
   // 1. Set Static Skeleton
-  currentPanel.innerHTML = `
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`
     <button class="lm-close">&times;</button>
     <div class="lm-panel-header">
       <img class="lm-poster" style="display:none;">
@@ -328,7 +333,8 @@ function renderFullPanel(data, query) {
         </a>
       </div>
     </div>
-  `;
+  `, 'text/html');
+  currentPanel.replaceChildren(...doc.body.childNodes);
 
   // 2. Populate Dynamic Values via textContent and setAttribute
   if (data.image) {
@@ -392,7 +398,7 @@ function renderFullPanel(data, query) {
       if (r.isSpoiler) {
         const warning = document.createElement('div');
         warning.className = 'lm-spoiler-warning';
-        warning.innerHTML = 'Contains Spoilers <span class="lm-reveal-link">Reveal</span>';
+        safeSet(warning, 'Contains Spoilers <span class="lm-reveal-link">Reveal</span>');
         
         const textDiv = document.createElement('div');
         textDiv.className = 'lm-review-text';

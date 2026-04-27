@@ -1,14 +1,14 @@
 {
   "manifest_version": 2,
   "name": "LetterMarkd",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Letterboxd ratings and actions overlaid on any movie-related webpage.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "lettermarkd@labreo.com",
+      "id": "lettermarkd-app@labreo.com",
       "strict_min_version": "109.0",
       "data_collection_permissions": {
-        "is_data_collection_policy_required": false
+        "required": ["none"]
       }
     }
   },
