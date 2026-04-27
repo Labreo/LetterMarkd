@@ -1,8 +1,9 @@
 # 📝 Post-Mortem: LetterMarkd Development
 
-**Date:** April 26, 2026
+**Date:** April 27, 2026
 **Project:** LetterMarkd (Universal Movie Discovery Extension)
 **Lead Developer:** Antigravity (AI) & Sanjay Waradkar (User)
+**Current Version:** v1.0.4
 
 ---
 
@@ -12,51 +13,37 @@ LetterMarkd was built to solve the "context switching" problem for cinephiles. I
 ## ✅ 2. What Went Right (Successes)
 
 ### 🎨 Premium UI Transformation
-- **Glassmorphism Design**: Successfully implemented a high-end UI using `backdrop-filter`, multi-layered shadows, and the `Inter` font family to match the AI-generated promotional assets.
-- **Asynchronous "Pop-in" Stats**: To solve performance bottlenecks, we refactored the engine to deliver Letterboxd data instantly (Stage 1) and "pop-in" secondary metadata (Stage 2: IMDb/Mojo) asynchronously.
+- **Glassmorphism Design**: Successfully implemented a high-end UI using `backdrop-filter`, multi-layered shadows, and the `Inter` font family.
+- **Asynchronous "Pop-in" Stats**: refactored the engine to deliver Letterboxd data instantly (Stage 1) and "pop-in" secondary metadata (Stage 2: IMDb/Mojo) asynchronously.
 
 ### 🔍 Metadata Engine (No API Keys)
-- **CORS & Scraping**: Successfully bypassed the need for expensive/restricted APIs (OMDb/TMDB) by using robust background scraping with customized `User-Agent` headers and `AbortController` timeouts.
-- **Region-Sensing JustWatch**: Implemented a "Stage 2 CSI" fetch that forces Letterboxd to return region-accurate streaming providers by passing `esiAllowUser=true&esiAllowCountry=true` parameters.
+- **Scraping vs. APIs**: Successfully bypassed the need for expensive/restricted APIs (OMDb/TMDB) by using robust background scraping with customized `User-Agent` headers and `AbortController` timeouts.
+- **Region-Sensing JustWatch**: Implemented a "Stage 2 CSI" fetch that forces Letterboxd to return region-accurate streaming providers.
 
 ### 🎢 Pivot: Simplified Interaction Model
-- **The Shift**: After experimenting with a universal `[aria-label]` hover-based approach for streaming platforms (Netflix, Disney+, etc.), we decided to remove it to prioritize user intent.
-- **Impact**: By sticking to an explicit **Highlight-to-Search** model, we reduced complexity and eliminated "false positives" where the UI would trigger unintentionally while browsing streaming catalogs.
-
-### 🛠️ Build & Architecture
-- **Unified Build System**: Created a `build.sh` script that manages the structural differences between Chrome (Manifest V3) and Firefox (Manifest V2), ensuring parity across browsers.
-- **Cache Purge Engine**: Developed a version-based cache invalidation system (`film_v1` through `film_v12`) to ensure users always receive the latest scraping logic without manual cache clearing.
+- **Highlight-to-Search**: Decided to remove the universal hover-based discovery for streaming sites in favor of an explicit selection model. This significantly reduced complexity and eliminated unintended triggers.
 
 ## ⚠️ 3. What Went Wrong (Challenges & Blockers)
 
-### 🧩 Build Synchronization Issues
-- **Problem**: Early in the project, code changes weren't reflecting in the browser because the build script was missing certain directories (like `options/`).
-- **Solution**: Audited the `build.sh` script and added explicit directory syncing. Added version stamps to the popup UI for visual confirmation of successful builds.
+### 🦊 Firefox MV2 Compatibility
+- **Storage Rejections**: Discovered that `chrome.storage.local.get` in Firefox MV2 (without a polyfill) does not return a Promise, causing `await` calls to return `undefined`. Fixed by wrapping calls in a standard Promise/callback wrapper.
+- **Forbidden Headers**: Firefox strictly forbids setting the `User-Agent` header in `fetch()` calls. This caused IMDb and Mojo stats to fail on Firefox.
+- **IMDb Reference Page Fallback**: Solved the Firefox IMDb block by implementing a fallback to the "Reference" view (`/reference`), which is less strictly protected than the modern IMDb title pages.
+
+### 📅 Release Date Extraction
+- **Missing Full Dates**: Initially, the extension only captured the release year. Users requested full dates.
+- **Solution**: Enhanced the scraper to extract full date strings from Letterboxd metadata, page headers, and IMDb JSON-LD, then added a `formatDate` utility to present them in a user-friendly way.
 
 ### 🛑 Scraping Blocks
-- **Problem**: IMDb and Box Office Mojo initially returned empty results because they detected the extension's "headless" fetch calls.
-- **Solution**: Implemented `COMMON_HEADERS` with a realistic browser `User-Agent` and `Accept` headers to mimic human traffic.
+- **Bot Detection**: IMDb and Box Office Mojo initially blocked "headless" fetch calls.
+- **Solution**: Implemented `COMMON_HEADERS` with a realistic browser fingerprint and a graceful fallback mechanism for browsers (Firefox) that reject forbidden headers.
 
-### 📝 Selection Over-Triggering
-- **Problem**: The extension would trigger on any highlighted text, including long paragraphs, which was intrusive.
-- **Solution**: Added a `maxWordCount` setting (default: 27) and a RegEx validator to ensure the extension only activates on potential titles.
-
-### 🧹 Hover Search Complexity
-- **Problem**: The hover-based discovery on streaming sites (Netflix, Disney+, etc.) proved to be overcomplicated and occasionally triggered when not desired, leading to a cluttered experience.
-- **Solution**: Removed the hover-based logic entirely in v1.0.4, reverting to a cleaner, selection-only model that guarantees the user actually wants information on a specific title.
-
-### 🦊 Firefox Fetch & Forbidden Headers
-- **Problem**: Slug-guessing failed on Firefox because `fetch()` rejected when attempting to set a forbidden `User-Agent` header in the background script.
-- **Solution**: Refactored the background scraper to remove manual header overrides, allowing the browser to manage request headers naturally, which restored direct-match functionality on Firefox.
-
-## 🧠 4. LLM & Technical Insights (For Future Reference)
-
-- **Regex Stability**: We found that scraping via `match()` on raw HTML strings is faster and more resilient in background service workers than trying to parse full DOM trees with `DOMParser`.
-- **Message Lifecycle**: In MV3, the service worker is ephemeral. We used `chrome.tabs.sendMessage` to push "Extra Stats" back to the content script after the initial `sendResponse` had already closed.
-- **Branding**: The custom stylized "L" logo was generated by AI and then manually integrated as an SVG in the UI and as a PNG in the icon set to ensure brand consistency.
+## 🧠 4. LLM & Technical Insights
+- **Regex vs. DOMParser**: Scraping via `match()` on raw HTML strings proved faster and more resilient in background workers than parsing full DOM trees.
+- **Message Lifecycle**: In MV3, the service worker is ephemeral. We used `chrome.tabs.sendMessage` to push "Extra Stats" back to the content script after the initial response closed.
 
 ## 🏁 5. Final Status
-LetterMarkd is now in a production-ready state (**v1.0.3**) with optimized performance, robust anti-blocking measures, and a premium aesthetic that matches its promotional imagery.
+LetterMarkd is now in a production-ready state (**v1.0.4**) with optimized performance for both Chrome and Firefox, robust anti-blocking measures, and a premium aesthetic.
 
 ---
 

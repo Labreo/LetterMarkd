@@ -71,6 +71,21 @@ async function handleFetchRating(title, year, tabId) {
       if (taglineMatch) parsedData.tagline = taglineMatch[1].trim();
     }
 
+    if (!parsedData.year) {
+      const yearMatch = html.match(/films\/year\/(\d{4})\//i) || 
+                        html.match(/<div class="release-year">.*?(\d{4}).*?<\/div>/i) ||
+                        html.match(/<meta property="og:title" content=".*?\((\d{4})\)"/i) ||
+                        html.match(/<title>.*?\((\d{4})\).*?<\/title>/i);
+      if (yearMatch) parsedData.year = yearMatch[1];
+    }
+    
+    // Look for full release date in HTML if meta failed
+    const fullDateMatch = html.match(/class="date">([^<]+ \d{4})<\/span>/i) || 
+                          html.match(/Released:? <strong>([^<]+)<\/strong>/i);
+    if (fullDateMatch && (!parsedData.year || parsedData.year.length < 5)) {
+      parsedData.year = fullDateMatch[1].trim();
+    }
+
     const reviews = parseReviews(html);
     let watchProviders = parseWatchProviders(html);
     
@@ -93,7 +108,7 @@ async function handleFetchRating(title, year, tabId) {
       extraStats: { loading: true }, 
       url: lbResult.url, 
       title: lbResult.title, 
-      year: lbResult.year 
+      year: lbResult.year || parsedData.year
     };
 
     // Trigger extra stats in the background (SLOW)
@@ -167,6 +182,19 @@ function parseRatingFromJsonLd(html) {
       const cast = obj.actors ? obj.actors.slice(0, 3).map(a => a.name).join(', ') : null;
       const genres = Array.isArray(obj.genre) ? obj.genre : (obj.genre ? [obj.genre] : []);
       const imageObj = obj.image ? (Array.isArray(obj.image) ? obj.image[0] : obj.image) : null;
+      
+      // Extract year/date from releasedEvent or datePublished
+      let year = null;
+      if (obj.releasedEvent && Array.isArray(obj.releasedEvent)) {
+        // Try to find a full date (YYYY-MM-DD)
+        const fullDate = obj.releasedEvent.find(e => e.startDate && e.startDate.length > 4);
+        year = fullDate ? fullDate.startDate : (obj.releasedEvent[0]?.startDate || null);
+      } 
+      
+      if (!year && obj.datePublished) {
+        year = obj.datePublished;
+      }
+
       return {
         rating: (ar.ratingValue && !isNaN(parseFloat(ar.ratingValue))) ? parseFloat(ar.ratingValue).toFixed(2) : null,
         ratingCount: ar.ratingCount ? parseInt(ar.ratingCount).toLocaleString() : null,
@@ -176,7 +204,8 @@ function parseRatingFromJsonLd(html) {
         cast, 
         genres,
         description: obj.description || null,
-        tagline: obj.tagline || null
+        tagline: obj.tagline || null,
+        year
       };
     };
     return Array.isArray(data) ? extract(data.find(i => i['@type'] === 'Movie')) : extract(data);
@@ -243,27 +272,65 @@ async function fetchExtraStatsAndNotify(imdbId, baseData, cacheKey, tabId) {
     let imdbRating = null;
     let boxOffice = null;
     let budget = null;
+    let imdbReleaseDate = null;
 
-    if (imdbRes) {
-      const html = await imdbRes.text();
+    let imdbHtml = null;
+    if (imdbRes && imdbRes.ok) {
+      imdbHtml = await imdbRes.text();
+    } else {
+      // Fallback for Firefox/Blocked: Try the "reference" page which is often less protected
+      const refRes = await fetchWithTimeout(`https://www.imdb.com/title/${imdbId}/reference`, 3500).catch(() => null);
+      if (refRes && refRes.ok) imdbHtml = await refRes.text();
+    }
+
+    if (imdbHtml) {
+      const html = imdbHtml;
+      
+      // Try JSON-LD first
       const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
       if (ldMatch) {
         try {
-          const data = JSON.parse(ldMatch[1]);
-          imdbRating = data.aggregateRating?.ratingValue || null;
+          const rawData = JSON.parse(ldMatch[1]);
+          const data = Array.isArray(rawData) ? rawData.find(x => x['@type'] === 'Movie') : rawData;
+          if (data) {
+            imdbRating = data.aggregateRating?.ratingValue || null;
+            imdbReleaseDate = data.datePublished || null;
+          }
         } catch (e) {}
+      }
+
+      // HTML Fallbacks (including Reference page patterns)
+      if (!imdbRating) {
+        const ratingMatch = html.match(/hero-rating-bar__aggregate-rating__score.*?<span>(\d+\.?\d*)<\/span>/i) || 
+                            html.match(/Rating: (\d+\.?\d*)\/10/i) ||
+                            html.match(/<span class="ipl-rating-star__rating">(\d+\.?\d*)<\/span>/i);
+        if (ratingMatch) imdbRating = ratingMatch[1];
+      }
+      
+      if (!imdbReleaseDate) {
+        const dateMatch = html.match(/releaseinfo\?ref_=tt_ov_inf.*?>(.*?) \(USA\)/i) || 
+                          html.match(/releaseinfo.*?>(.*?) \(/i) ||
+                          html.match(/<th[^>]*>Release Date<\/th>[\s\S]*?<td>(.*?)<\/td>/i);
+        if (dateMatch) imdbReleaseDate = dateMatch[1].trim();
       }
     }
 
-    if (mojoRes) {
+    if (mojoRes && mojoRes.ok) {
       const html = await mojoRes.text();
-      const wwMatch = html.match(/Worldwide<\/span><span class="money">([^<]+)<\/span>/);
+      const wwMatch = html.match(/Worldwide<\/span><span class="money">([^<]+)<\/span>/i) || 
+                      html.match(/Worldwide[\s\S]*?class="money">([^<]+)<\/span>/i);
       if (wwMatch) boxOffice = wwMatch[1];
-      const bMatch = html.match(/Budget<\/span><span class="money">([^<]+)<\/span>/);
+      
+      const bMatch = html.match(/Budget<\/span><span class="money">([^<]+)<\/span>/i) || 
+                     html.match(/Budget[\s\S]*?class="money">([^<]+)<\/span>/i);
       if (bMatch) budget = bMatch[1];
     }
 
-    const finalData = { ...baseData, extraStats: { imdbRating, boxOffice, budget, loading: false } };
+    const finalData = { 
+      ...baseData, 
+      extraStats: { imdbRating, boxOffice, budget, imdbReleaseDate, loading: false },
+      year: imdbReleaseDate || baseData.year
+    };
     chrome.storage.local.set({ [cacheKey]: { data: finalData, timestamp: Date.now() } });
     
     // Notify the content script that extra stats are ready
@@ -275,23 +342,30 @@ async function fetchExtraStatsAndNotify(imdbId, baseData, cacheKey, tabId) {
 }
 
 async function fetchWithTimeout(url, timeout = 3000, options = {}) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
+  const fetchSingle = async (opts) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, { ...opts, signal: controller.signal });
+      clearTimeout(id);
+      return response;
+    } catch (e) {
+      clearTimeout(id);
+      throw e;
+    }
+  };
+
   try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(id);
-    return response;
+    return await fetchSingle(options);
   } catch (e) {
-    if (options.headers && options.headers['User-Agent']) {
+    console.error(`[LetterMarkd] Fetch error for ${url}:`, e.name, e.message);
+    if (options.headers && options.headers['User-Agent'] && (e.name === 'TypeError' || e.message.includes('forbidden'))) {
       // Retry without User-Agent for strict browsers like Firefox
       const newOptions = { ...options };
       newOptions.headers = { ...options.headers };
       delete newOptions.headers['User-Agent'];
-      const response = await fetch(url, { ...newOptions, signal: controller.signal });
-      clearTimeout(id);
-      return response;
+      return await fetchSingle(newOptions);
     }
-    clearTimeout(id);
     throw e;
   }
 }

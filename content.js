@@ -282,7 +282,7 @@ function renderFullPanel(data, query) {
           <div class="lm-info-item"><strong>Director</strong> ${data.director || 'N/A'}</div>
           <div class="lm-info-item"><strong>Cast</strong> ${data.cast || 'N/A'}</div>
           <div class="lm-info-item"><strong>Genres</strong> ${(data.genres || []).join(', ') || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Release</strong> ${data.year || 'N/A'}</div>
+          <div class="lm-info-item"><strong>Release</strong> ${formatDate(data.year) || 'N/A'}</div>
         </div>
       </div>
 
@@ -338,4 +338,19 @@ function getStarString(rating) {
   const full = Math.floor(num);
   const half = num % 1 >= 0.5 ? 1 : 0;
   return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(Math.max(0, 5 - full - half));
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return null;
+  // If it's just a year (4 digits), return as is
+  if (/^\d{4}$/.test(dateStr)) return dateStr;
+  
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return d.toLocaleDateString(undefined, options);
+  } catch (e) {
+    return dateStr;
+  }
 }
