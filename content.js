@@ -11,11 +11,31 @@ let currentPrompt = null;
 let debounceTimer = null;
 let options = { ...DEFAULT_OPTIONS };
 
-function escapeHTML(str) {
-  if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+/**
+ * Safely sets the innerHTML of a container by using a static template 
+ * and populating dynamic fields via textContent to satisfy strict security validators.
+ */
+function safeSet(container, html, textMap = {}, attrMap = {}) {
+  container.innerHTML = html;
+  for (const [selector, text] of Object.entries(textMap)) {
+    const els = container.querySelectorAll(selector);
+    els.forEach(el => { el.textContent = text; });
+  }
+  for (const [selector, attrs] of Object.entries(attrMap)) {
+    const els = container.querySelectorAll(selector);
+    els.forEach(el => {
+      for (const [attr, val] of Object.entries(attrs)) {
+        if (attr === 'src' || attr === 'href') {
+          // Basic URL validation
+          if (val.startsWith('http') || val.startsWith('https') || val.startsWith('data:')) {
+            el.setAttribute(attr, val);
+          }
+        } else {
+          el.setAttribute(attr, val);
+        }
+      }
+    });
+  }
 }
 
 let allowlist = [];
@@ -206,13 +226,15 @@ function showPanel(rect, query) {
 
   chrome.runtime.sendMessage({ type: 'SEARCH_FILM', query: searchTitle, year: searchYear }, (data) => {
     if (chrome.runtime.lastError || !data || !data.rating) {
-      currentPanel.innerHTML = `
+      safeSet(currentPanel, `
         <button class="lm-close">&times;</button>
         <div class="lm-panel-header" style="padding:30px; flex-direction:column; align-items:center; text-align:center;">
-          <div style="margin-bottom:20px; color:#9ab; font-size:14px;">No direct match found for "${escapeHTML(query)}"</div>
-          <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" class="lm-btn lm-btn-primary" style="text-decoration:none; padding: 10px 20px;">Search on Letterboxd</a>
+          <div class="lm-error-msg" style="margin-bottom:20px; color:#9ab; font-size:14px;"></div>
+          <a href="#" target="_blank" class="lm-search-link lm-btn lm-btn-primary" style="text-decoration:none; padding: 10px 20px;">Search on Letterboxd</a>
         </div>
-      `;
+      `, 
+      { '.lm-error-msg': `No direct match found for "${query}"` },
+      { '.lm-search-link': { href: `https://letterboxd.com/search/films/${encodeURIComponent(query)}/` } });
       currentPanel.querySelector('.lm-close').onclick = clearUI;
       return;
     }
@@ -241,108 +263,180 @@ function renderFullPanel(data, query) {
   `;
 
   // Determine if we should show extra stats.
-  // We ONLY show the IMDb/Mojo rows if they actually have data and are NOT loading.
   const hasExtraStats = data.extraStats && !data.extraStats.loading && 
                         (data.extraStats.imdbRating || data.extraStats.boxOffice || data.extraStats.budget);
 
+  // 1. Set Static Skeleton
   currentPanel.innerHTML = `
     <button class="lm-close">&times;</button>
     <div class="lm-panel-header">
-      ${data.image ? `<img src="${escapeHTML(data.image)}" class="lm-poster">` : ''}
+      <img class="lm-poster" style="display:none;">
       <div class="lm-panel-info">
         <div class="lm-panel-title">
           ${logoSvg}
-          <span style="flex:1;">${escapeHTML(data.title)}</span>
+          <span class="lm-title-text" style="flex:1;"></span>
         </div>
-        <div style="font-size:12px; color:var(--text-dim); margin-bottom:8px; margin-left:34px;">${escapeHTML(data.year) || ''}</div>
+        <div class="lm-year-text" style="font-size:12px; color:var(--text-dim); margin-bottom:8px; margin-left:34px;"></div>
         <div class="lm-panel-rating" style="margin-left:34px;">
-          <span class="lm-stars">${stars}</span>
-          <span style="color:#fff;">${escapeHTML(data.rating)}</span>
+          <span class="lm-stars"></span>
+          <span class="lm-rating-num" style="color:#fff;"></span>
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:6px; font-weight:500; margin-left:34px;">
-          ${escapeHTML(data.ratingCount) || '0'} ratings &bull; ${escapeHTML(data.reviewCount) || '0'} reviews
-        </div>
+        <div class="lm-counts-text" style="font-size:11px;color:var(--text-muted);margin-top:6px; font-weight:500; margin-left:34px;"></div>
       </div>
     </div>
     <div class="lm-panel-tabs">
-      <div class="lm-tab ${activeTab === 'info' ? 'lm-active' : ''}" data-tab="info">Info</div>
-      <div class="lm-tab ${activeTab === 'details' ? 'lm-active' : ''}" data-tab="details">Details</div>
-      <div class="lm-tab ${activeTab === 'reviews' ? 'lm-active' : ''}" data-tab="reviews">Reviews</div>
+      <div class="lm-tab" data-tab="info">Info</div>
+      <div class="lm-tab" data-tab="details">Details</div>
+      <div class="lm-tab" data-tab="reviews">Reviews</div>
     </div>
     <div class="lm-panel-body">
-      <div id="lm-tab-info" class="lm-tab-content" style="display: ${activeTab === 'info' ? 'block' : 'none'};">
+      <div id="lm-tab-info" class="lm-tab-content">
         <div class="lm-info-list">
           <div class="lm-info-item" style="margin-bottom: 12px; line-height: 1.5; color: #fff;">
-            ${data.tagline ? `<div style="font-style: italic; color: var(--accent); margin-bottom: 8px;">"${escapeHTML(data.tagline)}"</div>` : ''}
-            ${escapeHTML(data.description) || 'No description available.'}
+            <div class="lm-tagline-text" style="font-style: italic; color: var(--accent); margin-bottom: 8px; display:none;"></div>
+            <div class="lm-desc-text"></div>
           </div>
-          
-          ${hasExtraStats ? `
-          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-glass);">
-            ${data.extraStats.imdbRating ? `
-            <div class="lm-info-item" style="margin-bottom:8px;">
+          <div class="lm-extra-stats-box" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-glass); display:none;">
+            <div class="lm-imdb-row lm-info-item" style="margin-bottom:8px; display:none;">
               <strong>IMDb Rating</strong> 
-              <span style="color:var(--accent); font-weight:700;">★ ${escapeHTML(data.extraStats.imdbRating)}</span>
-            </div>` : ''}
-            ${data.extraStats.boxOffice ? `<div class="lm-info-item"><strong>Box Office</strong> <span style="color:#fff;">${escapeHTML(data.extraStats.boxOffice)}</span></div>` : ''}
-            ${data.extraStats.budget ? `<div class="lm-info-item"><strong>Budget</strong> <span style="color:#fff;">${escapeHTML(data.extraStats.budget)}</span></div>` : ''}
-          </div>` : ''}
-        </div>
-      </div>
-
-      <div id="lm-tab-details" class="lm-tab-content" style="display: ${activeTab === 'details' ? 'block' : 'none'};">
-        <div class="lm-info-list">
-          <div class="lm-info-item"><strong>Director</strong> ${escapeHTML(data.director) || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Cast</strong> ${escapeHTML(data.cast) || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Genres</strong> ${escapeHTML((data.genres || []).join(', ')) || 'N/A'}</div>
-          <div class="lm-info-item"><strong>Release</strong> ${escapeHTML(formatDate(data.year)) || 'N/A'}</div>
-        </div>
-      </div>
-
-      <div id="lm-tab-reviews" class="lm-tab-content" style="display: ${activeTab === 'reviews' ? 'block' : 'none'};">
-        ${(data.reviews || []).map((r, i) => `
-          <div class="lm-review-card">
-            <div class="lm-review-author">
-              <span style="color:var(--text-dim)">${escapeHTML(r.author)}</span>
-              <span style="color:var(--accent)">${escapeHTML(r.rating) || ''}</span>
+              <span class="lm-imdb-rating" style="color:var(--accent); font-weight:700;"></span>
             </div>
-            ${r.isSpoiler ? `
-              <div class="lm-spoiler-warning" id="lm-s-${i}">
-                Contains Spoilers <span class="lm-reveal-link" data-r="lm-t-${i}" data-w="lm-s-${i}">Reveal</span>
-              </div>
-              <div class="lm-review-text" id="lm-t-${i}" style="display:none;">${escapeHTML(r.text)}</div>
-            ` : `<div class="lm-review-text">${escapeHTML(r.text)}</div>`}
+            <div class="lm-boxoffice-row lm-info-item" style="display:none;"><strong>Box Office</strong> <span class="lm-box-office-val" style="color:#fff;"></span></div>
+            <div class="lm-budget-row lm-info-item" style="display:none;"><strong>Budget</strong> <span class="lm-budget-val" style="color:#fff;"></span></div>
           </div>
-        `).join('') || '<div style="text-align:center;padding:40px;color:var(--text-muted); font-size:13px;">No community reviews found.</div>'}
+        </div>
+      </div>
+      <div id="lm-tab-details" class="lm-tab-content" style="display:none;">
+        <div class="lm-info-list">
+          <div class="lm-info-item"><strong>Director</strong> <span class="lm-dir-val"></span></div>
+          <div class="lm-info-item"><strong>Cast</strong> <span class="lm-cast-val"></span></div>
+          <div class="lm-info-item"><strong>Genres</strong> <span class="lm-genres-val"></span></div>
+          <div class="lm-info-item"><strong>Release</strong> <span class="lm-release-val"></span></div>
+        </div>
+      </div>
+      <div id="lm-tab-reviews" class="lm-tab-content" style="display:none;">
+        <div class="lm-reviews-list"></div>
       </div>
     </div>
     <div class="lm-panel-actions">
-      <a href="${data.url}" target="_blank" class="lm-btn lm-btn-primary">View on Letterboxd</a>
+      <a href="#" target="_blank" class="lm-lb-link lm-btn lm-btn-primary">View on Letterboxd</a>
       <div style="margin-top:14px; text-align:center; display: flex; justify-content: center; gap: 15px; align-items: center;">
-        <a href="https://letterboxd.com/search/films/${encodeURIComponent(query)}/" target="_blank" style="font-size:10px; color:var(--text-muted); text-decoration:none; font-weight:500;" onmouseover="this.style.color='var(--text-dim)'" onmouseout="this.style.color='var(--text-muted)'">Not the right movie?</a>
+        <a href="#" target="_blank" class="lm-wrong-link" style="font-size:10px; color:var(--text-muted); text-decoration:none; font-weight:500;">Not the right movie?</a>
         <span style="color:rgba(255,255,255,0.1); font-size:10px;">|</span>
-        <a href="https://buymeacoffee.com/kakeroth" target="_blank" style="font-size:10px; color:#FFBD00; text-decoration:none; font-weight:600; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter='none'">
+        <a href="https://buymeacoffee.com/kakeroth" target="_blank" style="font-size:10px; color:#FFBD00; text-decoration:none; font-weight:600; display: flex; align-items: center; gap: 4px;">
           <span>☕</span> Buy me a coffee
         </a>
       </div>
     </div>
   `;
 
-  currentPanel.querySelector('.lm-close').onclick = clearUI;
-  const tabs = currentPanel.querySelectorAll('.lm-tab');
-  tabs.forEach(t => t.onclick = () => {
-    tabs.forEach(x => x.classList.remove('lm-active'));
-    t.classList.add('lm-active');
-    const target = t.getAttribute('data-tab');
+  // 2. Populate Dynamic Values via textContent and setAttribute
+  if (data.image) {
+    const poster = currentPanel.querySelector('.lm-poster');
+    poster.src = data.image;
+    poster.style.display = 'block';
+  }
+  currentPanel.querySelector('.lm-title-text').textContent = data.title;
+  currentPanel.querySelector('.lm-year-text').textContent = data.year || '';
+  currentPanel.querySelector('.lm-stars').textContent = stars;
+  currentPanel.querySelector('.lm-rating-num').textContent = data.rating || '';
+  currentPanel.querySelector('.lm-counts-text').textContent = `${data.ratingCount || '0'} ratings • ${data.reviewCount || '0'} reviews`;
+  
+  if (data.tagline) {
+    const tag = currentPanel.querySelector('.lm-tagline-text');
+    tag.textContent = `"${data.tagline}"`;
+    tag.style.display = 'block';
+  }
+  currentPanel.querySelector('.lm-desc-text').textContent = data.description || 'No description available.';
+
+  if (hasExtraStats) {
+    currentPanel.querySelector('.lm-extra-stats-box').style.display = 'block';
+    if (data.extraStats.imdbRating) {
+      currentPanel.querySelector('.lm-imdb-row').style.display = 'block';
+      currentPanel.querySelector('.lm-imdb-rating').textContent = `★ ${data.extraStats.imdbRating}`;
+    }
+    if (data.extraStats.boxOffice) {
+      currentPanel.querySelector('.lm-boxoffice-row').style.display = 'block';
+      currentPanel.querySelector('.lm-box-office-val').textContent = data.extraStats.boxOffice;
+    }
+    if (data.extraStats.budget) {
+      currentPanel.querySelector('.lm-budget-row').style.display = 'block';
+      currentPanel.querySelector('.lm-budget-val').textContent = data.extraStats.budget;
+    }
+  }
+
+  currentPanel.querySelector('.lm-dir-val').textContent = data.director || 'N/A';
+  currentPanel.querySelector('.lm-cast-val').textContent = data.cast || 'N/A';
+  currentPanel.querySelector('.lm-genres-val').textContent = (data.genres || []).join(', ') || 'N/A';
+  currentPanel.querySelector('.lm-release-val').textContent = formatDate(data.year) || 'N/A';
+
+  // Populating Reviews
+  const reviewsList = currentPanel.querySelector('.lm-reviews-list');
+  if (data.reviews && data.reviews.length > 0) {
+    data.reviews.forEach((r, i) => {
+      const card = document.createElement('div');
+      card.className = 'lm-review-card';
+      
+      const authorDiv = document.createElement('div');
+      authorDiv.className = 'lm-review-author';
+      const authorSpan = document.createElement('span');
+      authorSpan.style.color = 'var(--text-dim)';
+      authorSpan.textContent = r.author;
+      const ratingSpan = document.createElement('span');
+      ratingSpan.style.color = 'var(--accent)';
+      ratingSpan.textContent = r.rating || '';
+      authorDiv.appendChild(authorSpan);
+      authorDiv.appendChild(ratingSpan);
+      card.appendChild(authorDiv);
+
+      if (r.isSpoiler) {
+        const warning = document.createElement('div');
+        warning.className = 'lm-spoiler-warning';
+        warning.innerHTML = 'Contains Spoilers <span class="lm-reveal-link">Reveal</span>';
+        
+        const textDiv = document.createElement('div');
+        textDiv.className = 'lm-review-text';
+        textDiv.style.display = 'none';
+        textDiv.textContent = r.text;
+        
+        warning.querySelector('.lm-reveal-link').onclick = () => {
+          textDiv.style.display = 'block';
+          warning.style.display = 'none';
+        };
+        
+        card.appendChild(warning);
+        card.appendChild(textDiv);
+      } else {
+        const textDiv = document.createElement('div');
+        textDiv.className = 'lm-review-text';
+        textDiv.textContent = r.text;
+        card.appendChild(textDiv);
+      }
+      reviewsList.appendChild(card);
+    });
+  } else {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;padding:40px;color:var(--text-muted); font-size:13px;';
+    empty.textContent = 'No community reviews found.';
+    reviewsList.appendChild(empty);
+  }
+
+  // Links
+  currentPanel.querySelector('.lm-lb-link').href = data.url;
+  currentPanel.querySelector('.lm-wrong-link').href = `https://letterboxd.com/search/films/${encodeURIComponent(query)}/`;
+
+  // Tab switching logic
+  const tabElems = currentPanel.querySelectorAll('.lm-tab');
+  const updateTabs = (target) => {
+    tabElems.forEach(x => x.classList.toggle('lm-active', x.getAttribute('data-tab') === target));
     currentPanel.querySelector('#lm-tab-info').style.display = target === 'info' ? 'block' : 'none';
     currentPanel.querySelector('#lm-tab-details').style.display = target === 'details' ? 'block' : 'none';
     currentPanel.querySelector('#lm-tab-reviews').style.display = target === 'reviews' ? 'block' : 'none';
-  });
+  };
+  tabElems.forEach(t => t.onclick = () => updateTabs(t.getAttribute('data-tab')));
+  updateTabs(activeTab);
 
-  currentPanel.querySelectorAll('.lm-reveal-link').forEach(l => l.onclick = (e) => {
-    currentPanel.querySelector(`#${l.getAttribute('data-r')}`).style.display = 'block';
-    currentPanel.querySelector(`#${l.getAttribute('data-w')}`).style.display = 'none';
-  });
+  currentPanel.querySelector('.lm-close').onclick = clearUI;
 }
 
 function getStarString(rating) {

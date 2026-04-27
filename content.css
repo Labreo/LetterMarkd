@@ -53,6 +53,7 @@
 #lm-panel {
   position: absolute;
   width: 320px;
+  max-width: 90vw;
   background: var(--bg-glass);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
