@@ -36,7 +36,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function handleFetchRating(title, year, tabId) {
   const cacheKey = `film_v14_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
-  const cached = await chrome.storage.local.get(cacheKey);
+  const cached = await new Promise(resolve => {
+    chrome.storage.local.get(cacheKey, (result) => resolve(result || {}));
+  });
   
   if (cached[cacheKey] && (Date.now() - cached[cacheKey].timestamp < CACHE_TTL)) {
     return cached[cacheKey].data;
@@ -225,11 +227,17 @@ function extractImdbId(html) {
 }
 
 
+const COMMON_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9'
+};
+
 async function fetchExtraStatsAndNotify(imdbId, baseData, cacheKey, tabId) {
   try {
     const [imdbRes, mojoRes] = await Promise.all([
-      fetchWithTimeout(`https://www.imdb.com/title/${imdbId}/`, 3500).catch(() => null),
-      fetchWithTimeout(`https://www.boxofficemojo.com/title/${imdbId}/`, 3500).catch(() => null)
+      fetchWithTimeout(`https://www.imdb.com/title/${imdbId}/`, 3500, { headers: COMMON_HEADERS }).catch(() => null),
+      fetchWithTimeout(`https://www.boxofficemojo.com/title/${imdbId}/`, 3500, { headers: COMMON_HEADERS }).catch(() => null)
     ]);
 
     let imdbRating = null;
@@ -269,9 +277,23 @@ async function fetchExtraStatsAndNotify(imdbId, baseData, cacheKey, tabId) {
 async function fetchWithTimeout(url, timeout = 3000, options = {}) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
-  const response = await fetch(url, { ...options, signal: controller.signal });
-  clearTimeout(id);
-  return response;
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  } catch (e) {
+    if (options.headers && options.headers['User-Agent']) {
+      // Retry without User-Agent for strict browsers like Firefox
+      const newOptions = { ...options };
+      newOptions.headers = { ...options.headers };
+      delete newOptions.headers['User-Agent'];
+      const response = await fetch(url, { ...newOptions, signal: controller.signal });
+      clearTimeout(id);
+      return response;
+    }
+    clearTimeout(id);
+    throw e;
+  }
 }
 
 function parseWatchProviders(html) {
