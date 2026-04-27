@@ -19,9 +19,9 @@ LetterMarkd was built to solve the "context switching" problem for cinephiles. I
 - **CORS & Scraping**: Successfully bypassed the need for expensive/restricted APIs (OMDb/TMDB) by using robust background scraping with customized `User-Agent` headers and `AbortController` timeouts.
 - **Region-Sensing JustWatch**: Implemented a "Stage 2 CSI" fetch that forces Letterboxd to return region-accurate streaming providers by passing `esiAllowUser=true&esiAllowCountry=true` parameters.
 
-### 🎢 Accessibility-Led Hover Discovery (The "Unbreakable" Selector)
-- **The Shift**: Moved from fragile, site-specific DOM selectors to a universal `[aria-label]` hover-based approach for streaming platforms (Netflix, Disney+, etc.).
-- **Impact**: By leveraging accessibility standards, we achieved a discovery mechanism that is both non-intrusive and highly resistant to UI updates, while functioning on platforms where text selection is disabled.
+### 🎢 Pivot: Simplified Interaction Model
+- **The Shift**: After experimenting with a universal `[aria-label]` hover-based approach for streaming platforms (Netflix, Disney+, etc.), we decided to remove it to prioritize user intent.
+- **Impact**: By sticking to an explicit **Highlight-to-Search** model, we reduced complexity and eliminated "false positives" where the UI would trigger unintentionally while browsing streaming catalogs.
 
 ### 🛠️ Build & Architecture
 - **Unified Build System**: Created a `build.sh` script that manages the structural differences between Chrome (Manifest V3) and Firefox (Manifest V2), ensuring parity across browsers.
@@ -39,7 +39,15 @@ LetterMarkd was built to solve the "context switching" problem for cinephiles. I
 
 ### 📝 Selection Over-Triggering
 - **Problem**: The extension would trigger on any highlighted text, including long paragraphs, which was intrusive.
-- **Solution**: Added a `maxWordCount` setting (default: 7) and a RegEx validator to ensure the extension only activates on potential titles.
+- **Solution**: Added a `maxWordCount` setting (default: 27) and a RegEx validator to ensure the extension only activates on potential titles.
+
+### 🧹 Hover Search Complexity
+- **Problem**: The hover-based discovery on streaming sites (Netflix, Disney+, etc.) proved to be overcomplicated and occasionally triggered when not desired, leading to a cluttered experience.
+- **Solution**: Removed the hover-based logic entirely in v1.0.4, reverting to a cleaner, selection-only model that guarantees the user actually wants information on a specific title.
+
+### 🦊 Firefox Fetch & Forbidden Headers
+- **Problem**: Slug-guessing failed on Firefox because `fetch()` rejected when attempting to set a forbidden `User-Agent` header in the background script.
+- **Solution**: Refactored the background scraper to remove manual header overrides, allowing the browser to manage request headers naturally, which restored direct-match functionality on Firefox.
 
 ## 🧠 4. LLM & Technical Insights (For Future Reference)
 

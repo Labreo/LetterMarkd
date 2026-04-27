@@ -46,9 +46,8 @@ async function handleFetchRating(title, year, tabId) {
     const lbResult = await guessLetterboxdSlug(title, year);
     if (!lbResult || !lbResult.url) throw new Error('Film not found');
 
-    const response = await fetch(lbResult.url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
-    });
+    const response = await fetch(lbResult.url);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const html = await response.text();
 
     const parsedData = parseRatingFromJsonLd(html);
@@ -117,32 +116,38 @@ async function guessLetterboxdSlug(title, year) {
   }
 
   const toSlug = (text) => text.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
     .replace(/['".,;:!?()[\]{}]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
     
   const attempts = new Set();
   const base = toSlug(cleanTitle);
+  if (!base) return null;
+  
   attempts.add(base);
   if (cleanTitle.includes('&')) attempts.add(toSlug(cleanTitle.replace(/&/g, 'and')));
+  
   if (detectedYear) {
     const currentVars = Array.from(attempts);
     currentVars.forEach(v => attempts.add(`${v}-${detectedYear}`));
   }
+
   const currentVars = Array.from(attempts);
   currentVars.forEach(v => {
     if (v.startsWith('the-')) attempts.add(v.replace(/^the-/, ''));
-    else attempts.add(`the-${v}`);
+    else if (v.length > 0) attempts.add(`the-${v}`);
   });
 
   for (const slug of attempts) {
+    if (!slug) continue;
     const url = `https://letterboxd.com/film/${slug}/`;
     try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
-      });
+      const res = await fetch(url);
       if (res.status === 200) return { url, title: cleanTitle, year: detectedYear };
-    } catch (e) {}
+    } catch (e) {
+      console.error(`[LetterMarkd] Fetch failed for ${url}:`, e);
+    }
   }
   return null;
 }
@@ -219,17 +224,12 @@ function extractImdbId(html) {
   return match ? match[1] : null;
 }
 
-const COMMON_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.9'
-};
 
 async function fetchExtraStatsAndNotify(imdbId, baseData, cacheKey, tabId) {
   try {
     const [imdbRes, mojoRes] = await Promise.all([
-      fetchWithTimeout(`https://www.imdb.com/title/${imdbId}/`, 3500, { headers: COMMON_HEADERS }).catch(() => null),
-      fetchWithTimeout(`https://www.boxofficemojo.com/title/${imdbId}/`, 3500, { headers: COMMON_HEADERS }).catch(() => null)
+      fetchWithTimeout(`https://www.imdb.com/title/${imdbId}/`, 3500).catch(() => null),
+      fetchWithTimeout(`https://www.boxofficemojo.com/title/${imdbId}/`, 3500).catch(() => null)
     ]);
 
     let imdbRating = null;

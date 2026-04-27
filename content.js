@@ -3,20 +3,20 @@ let currentBubble = null;
 let currentPanel = null;
 let currentPrompt = null;
 let debounceTimer = null;
-let hoverTimer = null; // New timer for hover-based detection
+
 
 let allowlist = [];
 let blocklist = [];
 let isEnabledOnThisSite = false;
 let isPromptedOnThisSite = false;
-let maxWordCount = 12;
+let maxWordCount = 27;
 
 // Load settings
 function loadSettings() {
   chrome.storage.local.get(['allowlist', 'blocklist', 'masterEnabled', 'maxWordCount'], (result) => {
     allowlist = result.allowlist || [];
     blocklist = result.blocklist || [];
-    maxWordCount = result.maxWordCount || 12;
+    maxWordCount = result.maxWordCount || 27;
     const master = result.masterEnabled !== false;
     const host = window.location.hostname.replace('www.', '');
     
@@ -62,73 +62,10 @@ function clearUI() {
   if (currentBubble) { currentBubble.remove(); currentBubble = null; }
   if (currentPanel) { currentPanel.remove(); currentPanel = null; }
   if (currentPrompt) { currentPrompt.remove(); currentPrompt = null; }
-  clearTimeout(hoverTimer);
+
 }
 
-// Hover-based detection for streaming sites
-function isStreamingSite() {
-  const host = window.location.hostname;
-  return host.includes('netflix.com') || 
-         host.includes('primevideo.com') || 
-         host.includes('amazon.com') || 
-         host.includes('disneyplus.com') || 
-         host.includes('hulu.com') || 
-         host.includes('max.com') || 
-         host.includes('hbomax.com') || 
-         host.includes('apple.com') || 
-         host.includes('paramountplus.com') || 
-         host.includes('peacocktv.com') || 
-         host.includes('tubitv.com') || 
-         host.includes('mubi.com');
-}
 
-if (isStreamingSite()) {
-  document.addEventListener('mouseover', (e) => {
-    if (currentPanel || currentPrompt) return;
-
-    const target = e.target.closest && e.target.closest('[aria-label]');
-    if (target) {
-      let label = target.getAttribute('aria-label');
-      if (!label) return;
-      label = label.trim().replace(/^(Play|Watch|View|Browse)\s+/i, '');
-      
-      if (label && label.length > 1 && label.length < 80 && /^[a-zA-Z0-9\s:&'().,-]+$/.test(label) && !label.includes('Menu') && !label.includes('Search')) {
-        const rect = target.getBoundingClientRect();
-        
-        // Re-check permissions on every hover to stay in sync (Crucial for Firefox)
-        chrome.storage.local.get(['allowlist', 'blocklist'], (res) => {
-          const host = window.location.hostname;
-          const isEnabled = (res.allowlist || []).some(d => host.includes(d));
-          const isBlocked = (res.blocklist || []).some(d => host.includes(d));
-
-          if (isEnabled && !isBlocked) {
-            clearTimeout(hoverTimer);
-            hoverTimer = setTimeout(() => {
-              showBubble(rect, label, true);
-            }, 400);
-          } else if (!isEnabled && !isBlocked) {
-            clearTimeout(hoverTimer);
-            hoverTimer = setTimeout(() => {
-              showPermissionPrompt(rect);
-            }, 400);
-          }
-        });
-      }
-    }
-  });
-
-  document.addEventListener('mouseout', (e) => {
-    if (currentBubble && currentBubble.dataset.hover === 'true') {
-      // Small delay before clearing to allow clicking the bubble
-      clearTimeout(hoverTimer);
-      hoverTimer = setTimeout(() => {
-        if (currentBubble && !currentBubble.matches(':hover')) {
-          clearUI();
-        }
-      }, 500);
-    }
-  });
-}
 
 function handleSelection() {
   const selection = window.getSelection();
@@ -142,7 +79,7 @@ function handleSelection() {
   // Fetch settings dynamically to ensure sync (Crucial for Firefox)
   chrome.storage.local.get(['allowlist', 'blocklist', 'masterEnabled', 'maxWordCount'], (res) => {
     const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-    const currentMax = res.maxWordCount || 12;
+    const currentMax = res.maxWordCount || 27;
     if (wordCount > currentMax) return;
 
     const host = window.location.hostname.replace('www.', '');
@@ -211,11 +148,10 @@ function updateSitePermission(enable) {
   });
 }
 
-function showBubble(rect, text, isHover = false) {
+function showBubble(rect, text) {
   if (currentBubble || currentPanel) return;
   currentBubble = document.createElement('div');
   currentBubble.id = 'lm-selection-bubble';
-  if (isHover) currentBubble.dataset.hover = 'true';
   
   const top = rect.bottom + window.scrollY + 8;
   const left = rect.left + window.scrollX + (rect.width / 2);
