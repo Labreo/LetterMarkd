@@ -15,7 +15,6 @@
   "permissions": [
     "storage",
     "tabs",
-    "<all_urls>",
     "https://letterboxd.com/*",
     "https://www.imdb.com/*",
     "https://www.boxofficemojo.com/*"

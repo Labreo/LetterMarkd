@@ -35,7 +35,6 @@
     "128": "icons/icon128.png"
   },
   "host_permissions": [
-    "<all_urls>",
     "https://letterboxd.com/*",
     "https://www.imdb.com/*",
     "https://www.boxofficemojo.com/*"
