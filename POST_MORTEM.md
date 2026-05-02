@@ -1,9 +1,9 @@
 # 📝 Post-Mortem: LetterMarkd Development
 
-**Date:** April 27, 2026
+**Date:** May 2, 2026
 **Project:** LetterMarkd (Universal Movie Discovery Extension)
 **Lead Developer:** Antigravity (AI) & Sanjay Waradkar (User)
-**Current Version:** v1.0.4
+**Current Version:** v1.0.6
 
 ---
 

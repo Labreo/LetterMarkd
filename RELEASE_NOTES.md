@@ -1,13 +1,18 @@
-# 🚀 Release Notes: LetterMarkd v1.0.4
+# 🚀 Release Notes: LetterMarkd v1.0.6
 
-**Date:** April 27, 2026
-**Status:** Stable / Production-Ready
+**Date:** May 2, 2026
+**Status:** Stable / Production-Ready / Open Source
 
-This version focuses on **cross-browser stability**, **Firefox compatibility**, and **enhanced metadata detail**.
+This version focuses on **Edge support**, **Open Source readiness**, and **Build automation**.
 
 ---
 
 ## 💎 New Features & Enhancements
+
+### 🌍 Microsoft Edge Support
+- **What's new**: Official build target for Microsoft Edge.
+- **Compatibility**: Optimized for the latest Edge Chromium engine.
+- **Build Script**: Updated `build.sh` to automatically generate Edge-compatible packages.
 
 ### 📅 Full Release Dates
 - **What's new**: The "Details" tab now displays the full release date (e.g., "March 31, 1999") instead of just the year.
@@ -37,6 +42,7 @@ This version focuses on **cross-browser stability**, **Firefox compatibility**, 
 ## 🏗️ Build Information
 - **Chrome**: Manifest V3 (Service Worker)
 - **Firefox**: Manifest V2 (Background Scripts)
+- **Edge**: Manifest V3 (Service Worker)
 - **Engine**: Scraper v14
 
 ---
