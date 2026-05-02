@@ -1,6 +1,6 @@
 # 🎬 LetterMarkd
 
-![LetterMarkd Promo](<img width="2400" height="1800" alt="image" src="https://github.com/user-attachments/assets/e5ce316c-fdc4-415d-9e17-1920beb8a3d7" />)
+<img width="2400" height="1800" alt="LetterMarkd Promo" src="https://github.com/user-attachments/assets/e5ce316c-fdc4-415d-9e17-1920beb8a3d7" />
 
 **Universal Letterboxd ratings and movie discovery for any webpage.**
 
