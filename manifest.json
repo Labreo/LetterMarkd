@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LetterMarkd",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Universal Letterboxd ratings for any movie title you highlight.",
   "permissions": [
     "storage",

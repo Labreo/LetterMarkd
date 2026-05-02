@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "LetterMarkd",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Letterboxd ratings and actions overlaid on any movie-related webpage.",
   "browser_specific_settings": {
     "gecko": {
