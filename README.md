@@ -1,75 +1,98 @@
 # 🎬 LetterMarkd
 
-**Universal Letterboxd ratings and movie discovery for any webpage.**
-
-[![Version](https://img.shields.io/badge/version-1.0.6-E9C46A.svg)](manifest.json)
-[![License: MIT](https://img.shields.io/badge/License-MIT-264653.svg)](LICENSE)
-[![Browser](https://img.shields.io/badge/Browser-Chrome%20%7C%20Firefox%20%7C%20Edge-2A9D8F.svg)](#)
-
-LetterMarkd is a premium browser extension that brings the best of Letterboxd, IMDb, and Box Office Mojo directly to your browsing experience. Simply highlight any movie title on any website (Reddit, Wikipedia, News, etc.) to instantly view ratings, reviews, financial data, and release dates in a beautiful glassmorphism overlay.
-
----
-
-## 🌟 Features
-
-- **🔍 Universal Discovery**: Highlight any text on any website to search for a movie match instantly.
-- **📈 Comprehensive Stats**:
-    - **Letterboxd**: Real-time ratings and recent community reviews.
-    - **IMDb**: Integrated ratings and full release dates.
-    - **Financials**: Budget and Worldwide Box Office data from Box Office Mojo.
-- **🍿 Spoiler Blocker**: Advanced review parsing that hides spoilers by default with a "Click to Reveal" feature.
-- **📺 Where to Watch**: Region-aware streaming provider detection powered by Letterboxd/JustWatch.
-- **⚡ Performance First**:
-    - **Instant Popups**: Letterboxd data loads first for zero-wait interaction.
-    - **Lazy-Loaded Metadata**: Extra stats (IMDb/Mojo) pop in asynchronously.
-    - **Smart Caching**: High-speed local storage caching to minimize network requests.
-- **🎨 Premium UI**: A sleek, dark glassmorphism interface with smooth animations and professional typography.
-- **🔒 Privacy Minded**: Only runs on sites you permit. Includes a built-in Allowlist/Blocklist system.
-
----
-
-## 📸 Preview
-
 ![LetterMarkd Promo](store_assets/promo_banner.png)
 
----
+**Universal Letterboxd ratings and movie discovery for any webpage.**
 
-## 🚀 Installation
+![Version](https://img.shields.io/badge/version-1.0.6-E9C46A.svg)
+![License](https://img.shields.io/badge/license-MIT-264653.svg)
+![Browser](https://img.shields.io/badge/Browser-Chrome%20%7C%20Firefox%20%7C%20Edge-2A9D8F.svg)
 
-### Chrome / Edge (Chromium)
-1. Download the latest [release](https://github.com/Labreo/LetterMarkd/releases) or clone this repository.
-2. Go to your browser's extensions page:
-   - Chrome: `chrome://extensions`
-   - Edge: `edge://extensions`
-3. Enable **Developer mode** (usually a toggle in the corner).
-4. Click **Load unpacked** and select the `dist/chrome` (for Chrome) or `dist/edge` (for Edge) folder.
+## 📥 Installation
 
-### Firefox
-1. Download or clone this repository.
-2. Go to `about:debugging#/runtime/this-firefox`.
-3. Click **Load Temporary Add-on...** and select `manifest.json` from the `dist/firefox` folder.
+<a href="#"><img src="https://user-images.githubusercontent.com/585534/107280546-7b9b2a00-6a26-11eb-8f9f-f95932f4bfec.png" alt="Get LetterMarkd for Firefox" height="40"></a>
+<a href="#"><img src="https://user-images.githubusercontent.com/585534/107280673-a5ece780-6a26-11eb-9cc7-9fa9f9f81180.png" alt="Get LetterMarkd for Microsoft Edge" height="40"></a>
+- **Chrome:** (Coming soon)
 
 ---
 
-## 🛠️ Development & Building
+## 📖 Project Purpose
 
-This extension uses a custom build script to handle manifest differences between browsers.
+LetterMarkd is a premium browser extension designed for cinephiles who want instant movie context without leaving their current tab. It bridges the gap between your browsing experience and the world's leading film databases.
 
-```bash
-# Ensure the script is executable
-chmod +x build.sh
+Simply highlight any movie title on any website—whether you're on Reddit, Wikipedia, or a news site—to instantly view a sleek glassmorphism overlay featuring ratings, reviews, financial data, and streaming availability.
 
-# Run the build
-./build.sh
-```
+### ✨ Features
+* **🔍 Universal Discovery:** Highlight any text on any website to search for a movie match instantly.
+* **📈 Comprehensive Stats:**
+    * **Letterboxd:** Real-time ratings and recent community reviews.
+    * **IMDb:** Integrated ratings and full release dates.
+    * **Financials:** Budget and Worldwide Box Office data from Box Office Mojo.
+* **🍿 Spoiler Blocker:** Advanced review parsing that hides spoilers by default with a "Click to Reveal" feature.
+* **📺 Where to Watch:** Region-aware streaming provider detection powered by JustWatch.
+* **⚡ Performance First:** Letterboxd data loads instantly (Stage 1), with secondary metadata (Stage 2) popping in asynchronously.
+* **🔒 Privacy Minded:** No tracking, no data collection. Includes a built-in Allowlist/Blocklist system.
 
-The `build.sh` script generates optimized folders and `.zip` packages for Chrome, Firefox, and Edge in the `dist/` directory.
+---
 
-### Project Structure
-- `background.js`: Handles data fetching and scraping logic.
-- `content.js`: Injects the overlay and manages text selection.
-- `popup/`: The extension menu for settings and quick search.
-- `options/`: Detailed configuration for allowlists and preferences.
+## 🛠️ Tech Stack
+
+This project is built using:
+* **Vanilla JavaScript** & **CSS** (Glassmorphism design system)
+* **Scraper Engine v14:** Robust regex-based HTML parsing for high performance and resilience.
+* **Manifest V3** (Chrome/Edge) and **Manifest V2** (Firefox).
+* **Bash** for standard build automation and cross-browser manifest management.
+
+---
+
+## 💻 Local Setup Instructions
+
+These instructions have been designed and tested for a clean local machine environment.
+
+### Prerequisites
+* [Node.js](https://nodejs.org/en) (Optional, for future linting)
+* Git
+* A Chromium-based browser (Chrome, Edge, Brave) or Firefox
+
+### Step-by-Step Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Labreo/LetterMarkd.git
+   cd LetterMarkd
+   ```
+
+2. **Build the extension:**
+   Generate the clean, store-ready browser distributions:
+   ```bash
+   chmod +x build.sh
+   ./build.sh
+   ```
+   *This will create a `dist/` directory containing `chrome/`, `firefox/`, and `edge/` builds.*
+
+3. **Load the extension manually into your browser:**
+   * **For Chrome:** Navigate to `chrome://extensions/`, toggle on "Developer mode", click "Load unpacked", and select the `dist/chrome/` folder.
+   * **For Edge:** Navigate to `edge://extensions/`, toggle on "Developer mode", click "Load unpacked", and select `dist/edge/`.
+   * **For Firefox:** Navigate to `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on", and select the `manifest.json` inside the `dist/firefox/` folder.
+
+---
+
+## 🤝 Contribution Guidelines
+
+Contributions, issues, and feature requests are highly encouraged! 
+
+We follow standard GitHub flow. If you're looking to contribute code, please ensure your changes maintain the "No API Key" scraping philosophy and adhere to the premium glassmorphism UI standards.
+
+---
+
+## 💬 Contact & Support
+
+**Have questions or want to discuss a major feature?**
+Reach out to the team at **Labreo**.
+
+If this extension makes your movie discovery a little smoother, consider supporting the development! 
+
+[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/kakeroth)
 
 ---
 
@@ -77,6 +100,4 @@ The `build.sh` script generates optimized folders and `.zip` packages for Chrome
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
----
-
-Created with ❤️ by [Labreo](https://github.com/Labreo)
+**Built with ❤️ by [Labreo](https://github.com/Labreo)**
