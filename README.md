@@ -1,6 +1,6 @@
 # 🎬 LetterMarkd
 
-![LetterMarkd Promo](store_assets/promo_banner.png)
+![LetterMarkd Promo](<img width="2400" height="1800" alt="image" src="https://github.com/user-attachments/assets/e5ce316c-fdc4-415d-9e17-1920beb8a3d7" />)
 
 **Universal Letterboxd ratings and movie discovery for any webpage.**
 
@@ -10,10 +10,13 @@
 
 ## 📥 Installation
 
-<a href="#"><img src="https://user-images.githubusercontent.com/585534/107280546-7b9b2a00-6a26-11eb-8f9f-f95932f4bfec.png" alt="Get LetterMarkd for Firefox" height="40"></a>
-<a href="#"><img src="https://user-images.githubusercontent.com/585534/107280673-a5ece780-6a26-11eb-9cc7-9fa9f9f81180.png" alt="Get LetterMarkd for Microsoft Edge" height="40"></a>
+<a href="https://addons.mozilla.org/en-US/firefox/addon/lettermarkd/"><img src="https://user-images.githubusercontent.com/585534/107280546-7b9b2a00-6a26-11eb-8f9f-f95932f4bfec.png" alt="Get LetterMarkd for Firefox" height="40"></a>
 - **Chrome:** (Coming soon)
-
+- **Microsoft Edge:** (Coming soon)
+<!--
+<a href="#"><img src="https://user-images.githubusercontent.com/585534/107280673-a5ece780-6a26-11eb-9cc7-9fa9f9f81180.png" alt="Get LetterMarkd for Microsoft Edge" height="40"></a>  
+- **Chrome:** (Coming soon)
+-->
 ---
 
 ## 📖 Project Purpose
