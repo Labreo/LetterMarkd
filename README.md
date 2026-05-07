@@ -11,11 +11,10 @@
 ## 📥 Installation
 
 <a href="https://addons.mozilla.org/en-US/firefox/addon/lettermarkd/"><img src="https://user-images.githubusercontent.com/585534/107280546-7b9b2a00-6a26-11eb-8f9f-f95932f4bfec.png" alt="Get LetterMarkd for Firefox" height="40"></a>
-- **Chrome:** (Coming soon)
+<a href="https://chromewebstore.google.com/detail/lettermarkd/elcmbalhgpjnfebkidbdheglbhpccmcd"><img src="https://user-images.githubusercontent.com/585534/107280622-91a8ea80-6a26-11eb-8d07-77c548b28665.png" alt="Get LetterMarkd for Chrome" height="40"></a>
 - **Microsoft Edge:** (Coming soon)
 <!--
 <a href="#"><img src="https://user-images.githubusercontent.com/585534/107280673-a5ece780-6a26-11eb-9cc7-9fa9f9f81180.png" alt="Get LetterMarkd for Microsoft Edge" height="40"></a>  
-- **Chrome:** (Coming soon)
 -->
 ---
 
