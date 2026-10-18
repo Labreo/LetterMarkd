@@ -39,7 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
             chrome.tabs.sendMessage(tab.id, { type: 'SETTINGS_UPDATED' }, () => {
               if (chrome.runtime.lastError) { /* ignore */ }
             });
-          } catch (e) {}
+          } catch (e) {
+            console.warn('[LetterMarkd] Failed to send SETTINGS_UPDATED message to tab:', e);
+          }
         });
       });
     });
@@ -50,7 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
           chrome.tabs.sendMessage(tab.id, { type: 'SETTINGS_UPDATED' }, () => {
             if (chrome.runtime.lastError) { /* ignore */ }
           });
-        } catch (e) {}
+        } catch (e) {
+          console.warn('[LetterMarkd] Failed to send SETTINGS_UPDATED message to tab:', e);
+        }
       });
     });
   });
