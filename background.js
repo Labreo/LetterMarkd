@@ -380,6 +380,8 @@ async function fetchWithTimeout(url, timeout = 3000, options = {}) {
   }
 }
 
+const WATCH_PROVIDER_BLACKLIST = new Set(['Buy', 'Rent', 'Stream', 'All', 'IMDb', 'TMDb', 'Trailer']);
+
 function parseWatchProviders(html) {
   const providers = [];
   const seen = new Set();
@@ -396,8 +398,7 @@ function parseWatchProviders(html) {
         const name = nameMatch[1];
         
         // Exclude generic categories and metadata sites
-        const blacklist = ['Buy', 'Rent', 'Stream', 'All', 'IMDb', 'TMDb', 'Trailer'];
-        if (!blacklist.includes(name) && !seen.has(name)) {
+        if (!WATCH_PROVIDER_BLACKLIST.has(name) && !seen.has(name)) {
           seen.add(name);
           providers.push({
             name: name,
