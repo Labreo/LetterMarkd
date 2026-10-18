@@ -9,6 +9,7 @@ const DEFAULT_ALLOWLIST = [
   'paramountplus.com', 'peacocktv.com', 'tubitv.com', 'apple.com'
 ];
 
+if (typeof chrome !== "undefined" && chrome.runtime) {
 chrome.runtime.onInstalled.addListener(() => {
   // Clear old version caches (v1 to v11)
   chrome.storage.local.get(null, (items) => {
@@ -33,6 +34,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 });
+}
 
 async function handleFetchRating(title, year, tabId) {
   const cacheKey = `film_v14_${title.toLowerCase().replace(/\s+/g, '_')}_${year || ''}`;
@@ -420,4 +422,15 @@ function parseWatchProviders(html) {
     }
   } catch (e) {}
   return providers.slice(0, 5);
+}
+
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    parseRatingFromJsonLd,
+    parseReviews,
+    parseWatchProviders,
+    extractImdbId,
+    guessLetterboxdSlug
+  };
 }
