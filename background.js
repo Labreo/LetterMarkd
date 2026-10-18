@@ -255,7 +255,9 @@ function parseReviews(html) {
         });
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('[LetterMarkd] Error parsing reviews:', e);
+  }
   return reviews;
 }
 
