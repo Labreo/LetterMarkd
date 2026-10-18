@@ -311,6 +311,7 @@ function renderFullPanel(data, query) {
   if (data.watchProviders && data.watchProviders.length > 0) {
     currentPanel.querySelector('.lm-watch-box').style.display = 'block';
     const list = currentPanel.querySelector('.lm-watch-list');
+    const watchFragment = document.createDocumentFragment();
     data.watchProviders.forEach(p => {
       const item = document.createElement('a');
       item.className = 'lm-watch-item';
@@ -318,8 +319,9 @@ function renderFullPanel(data, query) {
       item.target = '_blank';
       item.textContent = p.name;
       item.title = `Watch on ${p.name}`;
-      list.appendChild(item);
+      watchFragment.appendChild(item);
     });
+    list.appendChild(watchFragment);
 
     if (data.justWatchUrl) {
       const jwLink = document.createElement('a');
@@ -340,6 +342,7 @@ function renderFullPanel(data, query) {
   // Populating Reviews
   const reviewsList = currentPanel.querySelector('.lm-reviews-list');
   if (data.reviews && data.reviews.length > 0) {
+    const reviewsFragment = document.createDocumentFragment();
     data.reviews.forEach((r, i) => {
       const card = document.createElement('div');
       card.className = 'lm-review-card';
@@ -379,8 +382,9 @@ function renderFullPanel(data, query) {
         textDiv.textContent = r.text;
         card.appendChild(textDiv);
       }
-      reviewsList.appendChild(card);
+      reviewsFragment.appendChild(card);
     });
+    reviewsList.appendChild(reviewsFragment);
   } else {
     const empty = document.createElement('div');
     empty.style.cssText = 'text-align:center;padding:40px;color:var(--text-muted); font-size:13px;';
