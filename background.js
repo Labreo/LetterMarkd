@@ -15,7 +15,6 @@ chrome.runtime.onInstalled.addListener(() => {
     const keysToRemove = Object.keys(items).filter(key => key.startsWith('film_v') && !key.startsWith('film_v14'));
     if (keysToRemove.length > 0) {
       chrome.storage.local.remove(keysToRemove);
-      console.log(`[LetterMarkd] Cleared ${keysToRemove.length} old cache entries.`);
     }
   });
 
