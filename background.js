@@ -106,7 +106,9 @@ async function handleFetchRating(title, year, tabId) {
           const csiJwMatch = csiHtml.match(/href="(https:\/\/www\.justwatch\.com\/[^"]+)"/i);
           if (csiJwMatch) justWatchUrl = csiJwMatch[1];
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("[LetterMarkd] Failed to fetch CSI watch providers:", e);
+      }
     }
 
     // Initial result with just Letterboxd data (FAST)
