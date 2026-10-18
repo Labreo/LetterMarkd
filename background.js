@@ -418,6 +418,8 @@ function parseWatchProviders(html) {
         }
       });
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("[LetterMarkd] Error parsing watch providers:", e);
+  }
   return providers.slice(0, 5);
 }
