@@ -1,0 +1,9 @@
+{
+  "name": "lettermarkd",
+  "version": "1.0.6",
+  "description": "Universal Letterboxd ratings and movie discovery extension",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}
