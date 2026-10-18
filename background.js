@@ -306,7 +306,9 @@ async function fetchExtraStatsAndNotify(imdbId, baseData, cacheKey, tabId) {
             imdbRating = data.aggregateRating?.ratingValue || null;
             imdbReleaseDate = data.datePublished || null;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn('[LetterMarkd] Error parsing IMDb JSON-LD:', e);
+        }
       }
 
       // HTML Fallbacks (including Reference page patterns)
